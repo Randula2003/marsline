@@ -179,11 +179,13 @@ apphosting.yaml            Firebase App Hosting runtime config
 
 This is a research prototype and is not flight-certified mission software. Resource models, mission-status values and distance estimates are not real crew safety advice.
 
-## Demo mode (no Firebase needed)
+## Firebase is the storage; demo mode is the fallback
 
-If the Firebase web settings are missing or still contain the `YOUR_...` placeholders, Marsline starts in **demo mode** automatically: waypoints, mission log, communications simulator, life-support snapshots and saved routes all work and are stored in your browser (localStorage). The NASA PDS index fetches still call NASA through the server. The sidebar shows **DEMO MODE**, and **Data & Firebase** has buttons to switch to demo mode or reset the demo data.
+Marsline stores each user's waypoints, mission log, communications simulator, life-support snapshots and saved routes in **Cloud Firestore**, under their own anonymous **Firebase Authentication** account (see "Firebase setup" above, and run `npm run check:firebase` to test the connection).
 
-To use Cloud Firestore instead, fill in `.env.local` (see Firebase setup above). To force demo mode even when Firebase is configured, set `NEXT_PUBLIC_DEMO_MODE=true`.
+If Firebase is not configured (the web settings are missing or still contain the `YOUR_...` placeholders), Marsline starts in **demo mode** instead, so anyone can still run every feature: the same data is kept in the browser (localStorage). The sidebar shows **DEMO MODE** or **FIREBASE CONNECTED**, and **Data & Firebase** has buttons to switch to demo mode or reset the demo data. The NASA PDS index fetches call NASA through the server in both modes.
+
+To force demo mode even when Firebase is configured, set `NEXT_PUBLIC_DEMO_MODE=true`.
 
 ## Study-area data pipeline (feature engineering)
 
