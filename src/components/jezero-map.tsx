@@ -228,6 +228,14 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
     } else if (hit) setEnd(hit.q);
   };
 
+  const saveView = () => {
+    drawRef.current();
+    canvasRef.current?.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob), link = document.createElement("a");
+      link.href = url; link.download = "marsline-jezero-view.png"; link.click(); URL.revokeObjectURL(url);
+    }, "image/png");
+  };
   const choose = (setter: (p: Pt) => void, key: string) => { const p = [...points, ...(start?.kind === "custom" ? [start] : []), ...(end?.kind === "custom" ? [end] : [])].find((q) => q.key === key); if (p) setter(p); };
   const optionList = [...points, ...(start?.kind === "custom" && !points.some((p) => p.key === start.key) ? [start] : []), ...(end?.kind === "custom" && !points.some((p) => p.key === end.key) ? [end] : [])];
   const toggle = (id: string) => setActive((a) => ({ ...a, [id]: !a[id] }));
@@ -248,7 +256,7 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
       <div className="jz-stage" ref={wrapRef}>
         <canvas ref={canvasRef} className={`jz-canvas ${pickMode ? "picking" : ""}`} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={() => setHover(null)} aria-label="Interactive Jezero Crater map" />
         {!terrain && <div className="jz-loading">LOADING JEZERO LAYERS…</div>}
-        <div className="jz-zoom"><button aria-label="Zoom in" onClick={() => zoomAt(size.current.w / 2, size.current.h / 2, 1.5)}>＋</button><button aria-label="Zoom out" onClick={() => zoomAt(size.current.w / 2, size.current.h / 2, 1 / 1.5)}>－</button><button aria-label="Fit map" onClick={fit}>⤢</button></div>
+        <div className="jz-zoom"><button aria-label="Zoom in" onClick={() => zoomAt(size.current.w / 2, size.current.h / 2, 1.5)}>＋</button><button aria-label="Zoom out" onClick={() => zoomAt(size.current.w / 2, size.current.h / 2, 1 / 1.5)}>－</button><button aria-label="Fit map" onClick={fit}>⤢</button><button aria-label="Save current view as PNG" title="Save current view as PNG" onClick={saveView}>⬇</button></div>
         {pickMode && <div className="jz-pick">Click the map to set the {pickMode === "start" ? "START (A)" : "DESTINATION (B)"} · <button onClick={() => setPickMode(null)}>cancel</button></div>}
         <div className="jz-probe">{hover ? <>
           <b>{hover.lat.toFixed(4)}°N · {hover.lon.toFixed(4)}°E</b>
@@ -258,6 +266,12 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
       </div>
 
       <aside className="jz-side">
+        <article className="panel">
+          <div className="panel-top"><span>ONE-PAGE MAP</span><span className="tag green">PNG · PRINTABLE</span></div>
+          <p className="jz-why" style={{ marginTop: 0 }}>A single map of the whole study area: imagery, terrain safety, geology, science targets and the best routes, with legend and scale.</p>
+          <a className="button primary full" href={`${DATA_BASE}/jezero_mission_map.png`} download="jezero_mission_map.png">DOWNLOAD JEZERO MISSION MAP ↓</a>
+          <p className="fineprint">Use the ⬇ button on the map to save exactly what you see, including your layers and route.</p>
+        </article>
         <article className="panel">
           <div className="panel-top"><span>DATA LAYERS</span><span className="tag green">{imageLayers.length + VECTOR_LAYERS.length} LAYERS</span></div>
           <div className="jz-group">IMAGERY · TOPOGRAPHY · THERMAL</div>
