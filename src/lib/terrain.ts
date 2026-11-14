@@ -1,11 +1,21 @@
 // Loads the Jezero layers produced by notebooks/01_feature_engineering.ipynb and plans terrain-aware routes.
 // All grid coordinates are in "cells" of the 75 m analysis grid: gx = (lon - west) / dlon, gy = (north - lat) / dlat.
 
-export const DATA_BASE = "/data/jezero";
+export const REGIONS_BASE = "/data/regions";
+export const regionBase = (id: string) => `${REGIONS_BASE}/${id}`;
 
-export type LayerMeta = { id: string; title: string; file: string; dataType: string; source: string; resolution: string; bounds?: [number, number, number, number] };
+export type RegionInfo = { id: string; name: string; blurb: string; detail: "detailed" | "regional"; lat: number; lon: number; widthKm: number; heightKm: number; resolutionM: number; targets: number; missionMap: string };
+export async function loadRegions(): Promise<RegionInfo[]> {
+  const res = await fetch(`${REGIONS_BASE}/index.json`);
+  if (!res.ok) throw new Error("Study-area index not found. Run notebooks/01_feature_engineering.ipynb first.");
+  return res.json();
+}
+
+export type LayerMeta = { id: string; base?: boolean; title: string; file: string; dataType: string; source: string; resolution: string; bounds?: [number, number, number, number] };
 export type Target = { id: string; name: string; unit: string; lat: number; lon: number; science: number; slopeDeg: number; elevationM: number; terrainClass: number; reason: string };
 export type Meta = {
+  id: string; name: string; blurb: string; detail: "detailed" | "regional"; vectors: string[]; defaultLayers: string[];
+  elevEncoding: { offset: number; scale: number }; missionMap: string;
   region: string;
   grid: { width: number; height: number; dlon: number; dlat: number; stepM: number; mPerDeg: number };
   gridBounds: [number, number, number, number]; // south, west, north, east
@@ -13,12 +23,12 @@ export type Meta = {
   start: { id: string; name: string; lat: number; lon: number };
   targets: Target[];
   traversabilityShare: { nogo: number; caution: number; nominal: number };
-  molaCheck: { meanDiffM: number; rmsM: number; corr: number };
+  molaCheck: { meanDiffM: number; rmsM: number; corr: number } | null;
   elevationRangeM: [number, number];
   assumptions: string;
   layers: LayerMeta[];
 };
-export type Terrain = { meta: Meta; w: number; h: number; west: number; north: number; slope: Uint8Array; cost: Uint8Array; cls: Uint8Array; elev: Float32Array; dxM: number; dyM: number };
+export type Terrain = { meta: Meta; base: string; w: number; h: number; west: number; north: number; slope: Uint8Array; cost: Uint8Array; cls: Uint8Array; elev: Float32Array; dxM: number; dyM: number };
 
 export const cellOf = (t: Terrain, lon: number, lat: number): [number, number] => [(lon - t.west) / t.meta.grid.dlon, (t.north - lat) / t.meta.grid.dlat];
 export const lonLatOf = (t: Terrain, gx: number, gy: number): [number, number] => [t.west + gx * t.meta.grid.dlon, t.north - gy * t.meta.grid.dlat];
@@ -35,21 +45,22 @@ async function pixels(url: string): Promise<ImageData> {
   return ctx.getImageData(0, 0, c.width, c.height);
 }
 
-export async function loadTerrain(): Promise<Terrain> {
-  const res = await fetch(`${DATA_BASE}/meta.json`);
-  if (!res.ok) throw new Error("Jezero layers not found. Run notebooks/01_feature_engineering.ipynb first.");
+export async function loadTerrain(id: string): Promise<Terrain> {
+  const base = regionBase(id);
+  const res = await fetch(`${base}/meta.json`);
+  if (!res.ok) throw new Error(`Layers for "${id}" not found. Run notebooks/01_feature_engineering.ipynb first.`);
   const meta: Meta = await res.json();
-  const [d, e] = await Promise.all([pixels(`${DATA_BASE}/grid_data.png`), pixels(`${DATA_BASE}/grid_elev.png`)]);
+  const [d, e] = await Promise.all([pixels(`${base}/grid_data.png`), pixels(`${base}/grid_elev.png`)]);
   const w = d.width, h = d.height, n = w * h;
   if (w !== meta.grid.width || h !== meta.grid.height) throw new Error("Grid texture does not match meta.json");
   const slope = new Uint8Array(n), cost = new Uint8Array(n), cls = new Uint8Array(n), elev = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     slope[i] = d.data[i * 4]; cost[i] = d.data[i * 4 + 1]; cls[i] = d.data[i * 4 + 2];
-    elev[i] = (e.data[i * 4] * 256 + e.data[i * 4 + 1]) / 8 - 4096;
+    elev[i] = (e.data[i * 4] * 256 + e.data[i * 4 + 1]) / meta.elevEncoding.scale - meta.elevEncoding.offset;
   }
   const midLat = (meta.gridBounds[0] + meta.gridBounds[2]) / 2;
   return {
-    meta, w, h, west: meta.gridBounds[1], north: meta.gridBounds[2], slope, cost, cls, elev,
+    meta, base, w, h, west: meta.gridBounds[1], north: meta.gridBounds[2], slope, cost, cls, elev,
     dxM: meta.grid.dlon * meta.grid.mPerDeg * Math.cos(midLat * Math.PI / 180), dyM: meta.grid.dlat * meta.grid.mPerDeg
   };
 }
@@ -89,14 +100,15 @@ function addPolygons(p: Path2D, t: Terrain, type: string, coords: unknown) {
   const polys = (type === "Polygon" ? [coords] : type === "MultiPolygon" ? coords : []) as Ring[][];
   polys.forEach((poly) => poly.forEach((ring) => addRing(p, t, ring, true)));
 }
-async function getFC(name: string): Promise<FC> {
-  const r = await fetch(`${DATA_BASE}/${name}`);
+async function getFC(base: string, name: string): Promise<FC> {
+  const r = await fetch(`${base}/${name}`);
   if (!r.ok) throw new Error(`${name} missing`);
   return r.json();
 }
 
 export async function loadVectors(t: Terrain): Promise<Vectors> {
-  const [geo, lin, cr, el] = await Promise.all([getFC("geology_units.geojson"), getFC("linear_features.geojson"), getFC("craters.geojson"), getFC("landing_ellipse.geojson")]);
+  if (!t.meta.vectors.length) return { units: [], lines: [], craters: [], ellipse: new Path2D() }; // regional areas have no geologic map
+  const [geo, lin, cr, el] = await Promise.all([getFC(t.base, "geology_units.geojson"), getFC(t.base, "linear_features.geojson"), getFC(t.base, "craters.geojson"), getFC(t.base, "landing_ellipse.geojson")]);
   const byName = new Map<string, UnitGroup>();
   for (const f of geo.features) {
     const name = String(f.properties.name);

@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { DATA_BASE, WALK_SPEED_KMH, cellOf, loadTerrain, loadVectors, planRoute, probe, type Probe, type Route, type Terrain, type Vectors } from "@/lib/terrain";
+import { WALK_SPEED_KMH, cellOf, loadRegions, loadTerrain, loadVectors, planRoute, probe, type Probe, type RegionInfo, type Route, type Terrain, type Vectors } from "@/lib/terrain";
 
 type Waypoint = { id: string; name: string; type: string; latitudeDeg: number | string; longitudeDeg: number | string };
 type Pt = { key: string; label: string; lat: number; lon: number; kind: "base" | "target" | "waypoint" | "custom"; detail?: string; science?: number };
@@ -19,7 +19,7 @@ const fmtTime = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(
 const EVA_LIMIT_MIN = 480; // ASSUMPTION: typical suited EVA of about 8 hours
 const CLASS_NAME = ["No-go", "Caution", "Nominal"];
 
-export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
+export default function MarsMap({ waypoints, onSaveRoute }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [terrain, setTerrain] = useState<Terrain | null>(null);
@@ -33,6 +33,8 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
   const [hover, setHover] = useState<(Probe & { unit?: string }) | null>(null);
   const [saving, setSaving] = useState(false);
   const [imagesReady, setImagesReady] = useState(0);
+  const [regions, setRegions] = useState<RegionInfo[]>([]);
+  const [regionId, setRegionId] = useState("jezero");
 
   const view = useRef({ x: 0, y: 0, z: 1 });
   const size = useRef({ w: 0, h: 0, dpr: 1 });
@@ -46,18 +48,25 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
   const schedule = useCallback(() => { cancelAnimationFrame(frame.current); frame.current = requestAnimationFrame(() => drawRef.current()); }, []);
 
   // ---- data loading -----------------------------------------------------------------------------------------------
+  useEffect(() => { loadRegions().then(setRegions).catch(() => setRegions([])); }, []);
   useEffect(() => {
     let alive = true;
-    loadTerrain().then(async (t) => {
+    loadTerrain(regionId).then(async (t) => {
       const v = await loadVectors(t);
       if (!alive) return;
-      setTerrain(t); setVectors(v);
+      images.current.clear(); fitted.current = false;
+      setError(""); setTerrain(t); setVectors(v);
+      setActive(Object.fromEntries(t.meta.defaultLayers.map((id) => [id, true])));
       setStart({ key: "base", label: t.meta.start.name, lat: t.meta.start.lat, lon: t.meta.start.lon, kind: "base" });
       const first = t.meta.targets[0];
-      if (first) setEnd({ key: first.id, label: `${first.id} · ${first.name}`, lat: first.lat, lon: first.lon, kind: "target", detail: first.reason, science: first.science });
-    }).catch((e) => alive && setError(e instanceof Error ? e.message : "Unable to load Jezero layers"));
+      setEnd(first ? { key: first.id, label: `${first.id} · ${first.name}`, lat: first.lat, lon: first.lon, kind: "target", detail: first.reason, science: first.science } : null);
+    }).catch((e) => alive && setError(e instanceof Error ? e.message : "Unable to load map layers"));
     return () => { alive = false; };
-  }, []);
+  }, [regionId]);
+  const selectRegion = (id: string) => {
+    if (id === regionId) return;
+    setTerrain(null); setVectors(null); setStart(null); setEnd(null); setHover(null); setPickMode(null); setRegionId(id);
+  };
 
   useEffect(() => {
     if (!terrain) return;
@@ -66,7 +75,7 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
       const img = new Image();
       images.current.set(L.id, img);
       img.onload = () => setImagesReady((n) => n + 1);
-      img.src = `${DATA_BASE}/${L.file}`;
+      img.src = `${terrain.base}/${L.file}`;
     }
   }, [terrain, active]);
 
@@ -105,7 +114,7 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
         const img = images.current.get(L.id);
         if (!active[L.id] || !img?.complete || !img.naturalWidth || !L.bounds) continue;
         const [s, w, n, e] = L.bounds;
-        ctx.globalAlpha = L.id === "ctx" ? 1 : opacity;
+        ctx.globalAlpha = L.base ? 1 : opacity;
         ctx.imageSmoothingEnabled = !SMOOTH_OFF.includes(L.id);
         ctx.drawImage(img, (w - west) / meta.grid.dlon, (north - n) / meta.grid.dlat, (e - w) / meta.grid.dlon, (n - s) / meta.grid.dlat);
       }
@@ -151,7 +160,7 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
         ctx.lineWidth = 3; ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke(); label(tag, x - 3, y - 20);
       }
       // scale bar
-      const mpp = terrain.dxM / z; const nice = [50, 100, 200, 500, 1000, 2000, 5000, 10000].find((v) => v / mpp >= 80) ?? 10000; const bw = nice / mpp;
+      const mpp = terrain.dxM / z; const nice = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000].find((v) => v / mpp >= 80) ?? 100000; const bw = nice / mpp;
       ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(16, ch - 18); ctx.lineTo(16 + bw, ch - 18); ctx.moveTo(16, ch - 23); ctx.lineTo(16, ch - 13); ctx.moveTo(16 + bw, ch - 23); ctx.lineTo(16 + bw, ch - 13); ctx.stroke();
       label(nice >= 1000 ? `${nice / 1000} km` : `${nice} m`, 22, ch - 30);
     };
@@ -233,7 +242,7 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
     canvasRef.current?.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob), link = document.createElement("a");
-      link.href = url; link.download = "marsline-jezero-view.png"; link.click(); URL.revokeObjectURL(url);
+      link.href = url; link.download = `marsline-${terrain?.meta.id ?? "map"}-view.png`; link.click(); URL.revokeObjectURL(url);
     }, "image/png");
   };
   const choose = (setter: (p: Pt) => void, key: string) => { const p = [...points, ...(start?.kind === "custom" ? [start] : []), ...(end?.kind === "custom" ? [end] : [])].find((q) => q.key === key); if (p) setter(p); };
@@ -252,10 +261,12 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
 
   if (error) return <article className="panel"><div className="empty-state">{error}</div></article>;
   return (
+    <div className="jz-wrap">
+      <div className="jz-tabs" role="tablist" aria-label="Study areas">{regions.map((r) => <button key={r.id} role="tab" aria-selected={r.id === regionId} className={`jz-tab ${r.id === regionId ? "on" : ""}`} onClick={() => selectRegion(r.id)}>{r.name}<small>{r.detail === "detailed" ? "DETAILED" : "REGIONAL"}</small></button>)}</div>
     <div className="jz">
       <div className="jz-stage" ref={wrapRef}>
-        <canvas ref={canvasRef} className={`jz-canvas ${pickMode ? "picking" : ""}`} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={() => setHover(null)} aria-label="Interactive Jezero Crater map" />
-        {!terrain && <div className="jz-loading">LOADING JEZERO LAYERS…</div>}
+        <canvas ref={canvasRef} className={`jz-canvas ${pickMode ? "picking" : ""}`} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} onPointerLeave={() => setHover(null)} aria-label="Interactive Mars surface map" />
+        {!terrain && <div className="jz-loading">LOADING STUDY AREA…</div>}
         <div className="jz-zoom"><button aria-label="Zoom in" onClick={() => zoomAt(size.current.w / 2, size.current.h / 2, 1.5)}>＋</button><button aria-label="Zoom out" onClick={() => zoomAt(size.current.w / 2, size.current.h / 2, 1 / 1.5)}>－</button><button aria-label="Fit map" onClick={fit}>⤢</button><button aria-label="Save current view as PNG" title="Save current view as PNG" onClick={saveView}>⬇</button></div>
         {pickMode && <div className="jz-pick">Click the map to set the {pickMode === "start" ? "START (A)" : "DESTINATION (B)"} · <button onClick={() => setPickMode(null)}>cancel</button></div>}
         <div className="jz-probe">{hover ? <>
@@ -267,19 +278,22 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
 
       <aside className="jz-side">
         <article className="panel">
-          <div className="panel-top"><span>ONE-PAGE MAP</span><span className="tag green">PNG · PRINTABLE</span></div>
-          <p className="jz-why" style={{ marginTop: 0 }}>A single map of the whole study area: imagery, terrain safety, geology, science targets and the best routes, with legend and scale.</p>
-          <a className="button primary full" href={`${DATA_BASE}/jezero_mission_map.png`} download="jezero_mission_map.png">DOWNLOAD JEZERO MISSION MAP ↓</a>
+          <div className="panel-top"><span>STUDY AREA</span><span className="tag green">{regions.length || 1} AREAS</span></div>
+          <div className="jz-regions">{(regions.length ? regions : []).map((r) => <button key={r.id} className={`jz-region ${r.id === regionId ? "on" : ""}`} onClick={() => selectRegion(r.id)}>
+            <b>{r.name}</b><small>{r.lat.toFixed(2)}°N · {r.lon.toFixed(2)}°E · {r.widthKm}×{r.heightKm} km</small><span className={`tag ${r.detail === "detailed" ? "green" : ""}`}>{r.detail === "detailed" ? `DETAILED · ${r.resolutionM} m` : `REGIONAL · ${r.resolutionM} m`}</span></button>)}</div>
+          {terrain && <p className="jz-why">{terrain.meta.blurb}</p>}
+          {terrain?.meta.detail === "regional" && <p className="fineprint">Regional scale: 463 m elevation cells only, with no geologic map or optical imagery in the supplied files. Local slopes are smoothed, and targets are relief-derived candidates. Verify with HiRISE/CTX.</p>}
+          {terrain && <a className="button primary full" href={`${terrain.base}/${terrain.meta.missionMap}`} download={`${terrain.meta.id}_mission_map.png`}>DOWNLOAD ONE-PAGE MAP (PNG) ↓</a>}
           <p className="fineprint">Use the ⬇ button on the map to save exactly what you see, including your layers and route.</p>
         </article>
         <article className="panel">
-          <div className="panel-top"><span>DATA LAYERS</span><span className="tag green">{imageLayers.length + VECTOR_LAYERS.length} LAYERS</span></div>
+          <div className="panel-top"><span>DATA LAYERS</span><span className="tag green">{imageLayers.length + (terrain?.meta.vectors.length ?? 0)} LAYERS</span></div>
           <div className="jz-group">IMAGERY · TOPOGRAPHY · THERMAL</div>
           {imageLayers.filter((l) => l.dataType !== "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small></span></label>)}
           <div className="jz-group">DERIVED FEATURES</div>
           {imageLayers.filter((l) => l.dataType === "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small></span></label>)}
-          <div className="jz-group">GEOLOGY OVERLAYS</div>
-          {VECTOR_LAYERS.map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.note}</small></span></label>)}
+          {!!terrain?.meta.vectors.length && <div className="jz-group">GEOLOGY OVERLAYS</div>}
+          {VECTOR_LAYERS.filter((l) => terrain?.meta.vectors.includes(l.id)).map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.note}</small></span></label>)}
           <label className="jz-opacity">Overlay opacity<input type="range" min={0.15} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></label>
           {active.traversability && <div className="jz-legend"><i style={{ background: "#22c55e" }} />Nominal<i style={{ background: "#f59e0b" }} />Caution<i style={{ background: "#dc2626" }} />No-go</div>}
         </article>
@@ -314,10 +328,12 @@ export default function JezeroMap({ waypoints, onSaveRoute }: Props) {
         {terrain && <article className="panel">
           <div className="panel-top"><span>DATA QUALITY</span><span className="tag">VALIDATION</span></div>
           <div className="data-line"><span>No-go / caution / nominal</span><b>{(terrain.meta.traversabilityShare.nogo * 100).toFixed(0)} / {(terrain.meta.traversabilityShare.caution * 100).toFixed(0)} / {(terrain.meta.traversabilityShare.nominal * 100).toFixed(0)} %</b></div>
-          <div className="data-line"><span>HRSC vs MOLA elevation</span><b>r = {terrain.meta.molaCheck.corr} · RMS {terrain.meta.molaCheck.rmsM} m</b></div>
+          <div className="data-line"><span>Cell size</span><b>{terrain.meta.grid.stepM} m</b></div>
+          {terrain.meta.molaCheck && <div className="data-line"><span>HRSC vs MOLA elevation</span><b>r = {terrain.meta.molaCheck.corr} · RMS {terrain.meta.molaCheck.rmsM} m</b></div>}
           <p className="fineprint">{terrain.meta.assumptions}</p>
         </article>}
       </aside>
+    </div>
     </div>
   );
 }

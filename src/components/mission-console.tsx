@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { MEDA_INDEXES, type MedaSensor, NASA_DATASETS, MARS_MEAN_RADIUS_KM } from "@/lib/constants";
 import { firebaseRequest } from "@/lib/firebase-client";
-import JezeroMap, { type RouteSave } from "@/components/jezero-map";
+import MarsMap, { type RouteSave } from "@/components/mars-map";
 
 type Waypoint = { id: string; name: string; type: string; latitudeDeg: number | string; longitudeDeg: number | string; notes?: string | null; sequence?: number };
 type LogEntry = { id: string; title: string; note: string; logType: string; occurredAt: string };
@@ -34,6 +34,7 @@ const engineered = [
   { source: "CTX · THEMIS", kind: "OPTICAL · THERMAL", title: "Imagery and day/night infrared", detail: "Caltech CTX mosaic plus THEMIS day and night thermal infrared, warped onto the same grid as the terrain layers." },
   { source: "DERIVED", kind: "SAFETY", title: "Traversability classes", detail: "No-go, caution and nominal terrain from slope, roughness, geology cost and scarps. Drives the A* route planner." },
   { source: "DERIVED", kind: "SCIENCE", title: "Science value and targets", detail: "Unit-based score (0 to 1) and automatically chosen walkable targets inside the highest-value units." },
+  { source: "MGS MOLA", kind: "REGIONAL", title: "More study areas", detail: "Nili Fossae, Syrtis Major and Isidis Planitia built from the global 463 m MOLA tile: hillshade, slope, traversability, relief-derived targets and routes. Add more by editing REGIONS in the notebook." },
   { source: "MEDA INDEX", kind: "IN SITU", title: "Sol, season and local-time coverage", detail: "Which Perseverance sols, seasons (Ls) and hours have wind and ancillary data, ready to guide real data retrieval." }
 ] as const;
 function marsDistance(a: Waypoint, b: Waypoint) {
@@ -188,11 +189,11 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
           <Notice title="Scientific and safety scope">NASA observations are historical, location-specific and instrument-dependent. Resource reserves and mission values are software simulations, not certified life-support calculations.</Notice>
         </>}
         {view === "map" && <>
-          <PageHead eyebrow="NASA ORBITAL DATA · GEOSPATIAL CONTEXT" title="Surface map" desc="Jezero Crater layered view: orbital imagery, thermal, topography, geology and terrain-aware routes built from NASA and USGS data." right={<a className="button outline" href="https://trek.nasa.gov/mars/" target="_blank" rel="noreferrer">OPEN NASA MARS TREK ↗</a>} />
-          <JezeroMap waypoints={waypoints} onSaveRoute={dbReady ? saveRoute : undefined} />
+          <PageHead eyebrow="NASA ORBITAL DATA · GEOSPATIAL CONTEXT" title="Surface map" desc="Pick a study area: Jezero in detail, plus regional views of Nili Fossae, Syrtis Major and Isidis Planitia. Layered NASA and USGS data with terrain-aware routes." right={<a className="button outline" href="https://trek.nasa.gov/mars/" target="_blank" rel="noreferrer">OPEN NASA MARS TREK ↗</a>} />
+          <MarsMap waypoints={waypoints} onSaveRoute={dbReady ? saveRoute : undefined} />
           <SectionTitle eyebrow="MISSION OVERLAY DATA" title="Saved waypoints" note={`${waypoints.length} Firestore records`} />
           <div className="metric-grid three">{waypoints.length ? waypoints.map((w) => <article className="panel waypoint-card" key={w.id}><b>{w.name}</b><span className="tag">{w.type}</span><small>{Number(w.latitudeDeg).toFixed(5)}° · {Number(w.longitudeDeg).toFixed(5)}°</small></article>) : <div className="empty-state">No waypoint records yet. Add them in Route Planner.</div>}</div>
-          <Notice title="Where this data comes from">Layers were engineered offline by <code>notebooks/01_feature_engineering.ipynb</code> from Mars Express HRSC elevation, MRO CTX imagery, Mars Odyssey THEMIS and the USGS Jezero/Nili Fossae geologic map (SIM 3464), and cross-checked against MGS MOLA. Slope limits and geologic unit costs are concept-level assumptions, not NASA-certified mobility limits. Coordinates use the Mars 2000 sphere, east-positive longitude.</Notice>
+          <Notice title="Where this data comes from">Layers were engineered offline by <code>notebooks/01_feature_engineering.ipynb</code>. Jezero uses Mars Express HRSC elevation (75 m), MRO CTX imagery, Mars Odyssey THEMIS and the USGS geologic map (SIM 3464). The other areas use the global MGS MOLA elevation tile (463 m) only, so their slopes are smoothed and their targets are relief-derived. Slope limits and scores are concept-level assumptions, not NASA-certified mobility limits. Coordinates use the Mars 2000 sphere, east-positive longitude.</Notice>
         </>}
         {view === "conditions" && <>
           <PageHead eyebrow="SURFACE ENVIRONMENT · IN-SITU ARCHIVE" title="Current conditions" desc="Retrieve the published MEDA archive indexes and record retrieval metadata." />
@@ -210,7 +211,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
         {view === "science" && <>
           <PageHead eyebrow="MULTI-MISSION SCIENCE CONTEXT" title="Science data layers" desc="Catalogue optical, thermal, spectral, topographic, atmospheric, radar and rover-local products." right={<a className="button primary" href="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars" target="_blank" rel="noreferrer">WMTS DOCUMENTATION ↗</a>} />
           <div className="science-feature"><div><span className="overline">LAYER STACK</span><h2>One location. Multiple scientific perspectives.</h2><p>Begin with terrain, then compare thermal, dust, mineralogical, high-resolution optical and in-situ archive products. Their coverage, resolution and acquisition history differ.</p></div><div className="layer-stack"><i /><i /><i /><i /><i /></div></div>
-          <SectionTitle eyebrow="ENGINEERED FOR THIS APP" title="Jezero layers built from your NASA files" note="Produced by notebooks/01_feature_engineering.ipynb" />
+          <SectionTitle eyebrow="ENGINEERED FOR THIS APP" title="Layers built from your NASA files" note="Produced by notebooks/01_feature_engineering.ipynb" />
           <div className="metric-grid three">{engineered.map((item) => <article className="dataset-card" key={item.title}><div className="dataset-head"><span className="dataset-code">{item.source}</span><span className="tag green">{item.kind}</span></div><h3>{item.title}</h3><p>{item.detail}</p><button className="button outline" onClick={() => navigate("map")}>SHOW ON MAP →</button></article>)}</div>
           <SectionTitle eyebrow="CATALOGUE" title="Other NASA science sources" note="Not yet rendered as map layers" />
           <div className="metric-grid three">{layers.map((item) => <DatasetCard key={item.instrument} {...item} />)}</div>
@@ -219,7 +220,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
         </>}
         {view === "routes" && <>
           <PageHead eyebrow="EXCURSION PLANNING · MARS COORDINATES" title="Route planner" desc="Create Firestore-backed waypoints and estimate direct Mars surface distance between consecutive stops." />
-          <div className="data-banner"><div><span className="overline">NEW · TERRAIN-AWARE</span><h2>Plan a walkable route on the Jezero map</h2><p>A* pathfinding over slope, roughness, geology and ridge scarps. Straight-line distances below ignore terrain.</p></div><button className="button primary" onClick={() => navigate("map")}>OPEN SURFACE MAP →</button></div>
+          <div className="data-banner"><div><span className="overline">NEW · TERRAIN-AWARE</span><h2>Plan a walkable route on the map</h2><p>A* pathfinding over slope, roughness, geology and ridge scarps. Straight-line distances below ignore terrain.</p></div><button className="button primary" onClick={() => navigate("map")}>OPEN SURFACE MAP →</button></div>
           <div className="route-layout"><article className="panel"><div className="panel-top"><span>ADD WAYPOINT</span><span className="tag">IAU2000:49900</span></div><form className="form-grid" onSubmit={addWaypoint}>
             <label>Waypoint name<input required minLength={2} maxLength={80} value={wpName} onChange={(e) => setWpName(e.target.value)} placeholder="Clay-bearing outcrop" /></label>
             <label>Waypoint type<select value={wpType} onChange={(e) => setWpType(e.target.value)}><option value="SCIENCE_TARGET">Science target</option><option value="HABITAT">Habitat</option><option value="RESOURCE_CACHE">Resource cache</option><option value="OBSERVATION_POINT">Observation point</option><option value="HAZARD">Hazard / avoid</option><option value="ROVER_POSITION">Rover position</option><option value="OTHER">Other</option></select></label>
@@ -230,7 +231,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
           </form></article>
           <article className="panel route-summary"><div className="panel-top"><span>ROUTE DISTANCE</span><span className="tag orange">MARS RADIUS</span></div><div className="distance-number">{routeDistance.toFixed(2)} <span>KM</span></div><p>Great-circle estimate using mean Mars radius of {MARS_MEAN_RADIUS_KM.toLocaleString()} km.</p><div className="data-line"><span>Waypoints</span><b>{waypoints.length}</b></div><div className="data-line"><span>Coordinate system</span><b>IAU 2000 / 49900</b></div><div className="data-line"><span>Terrain correction</span><b>Use Surface map planner</b></div></article></div>
           <article className="panel"><div className="panel-top"><span>SAVED WAYPOINTS</span><span className="tag">{waypoints.length} RECORDS</span></div>{waypoints.length === 0 ? <div className="empty-state">No waypoint records. Connect Firebase and initialize the starter workspace to begin.</div> : <div className="table-wrap"><table><thead><tr><th>SEQ</th><th>NAME</th><th>TYPE</th><th>LATITUDE</th><th>LONGITUDE</th><th>LEG DISTANCE</th><th /></tr></thead><tbody>{waypoints.map((w, i) => <tr key={w.id}><td>{i + 1}</td><td><b>{w.name}</b></td><td>{w.type}</td><td>{Number(w.latitudeDeg).toFixed(5)}°</td><td>{Number(w.longitudeDeg).toFixed(5)}°</td><td>{i ? `${marsDistance(waypoints[i - 1], w).toFixed(2)} km` : "START"}</td><td><button className="remove" onClick={() => removeWaypoint(w.id)}>REMOVE</button></td></tr>)}</tbody></table></div>}</article>
-          <Notice title="Route limitation">Straight-line distances do not account for slope, boulders, roughness, suit mobility, dust, visibility or obstacles. Use the Surface map to plan a terrain-aware route for the Jezero area.</Notice>
+          <Notice title="Route limitation">Straight-line distances do not account for slope, boulders, roughness, suit mobility, dust, visibility or obstacles. Use the Surface map to plan a terrain-aware route in any study area.</Notice>
         </>}
         {view === "lifesupport" && <>
           <PageHead eyebrow="CREW RESOURCE MODEL" title="Life support" desc="Save an editable resource snapshot in Cloud Firestore. These values are fictional demonstrations." />

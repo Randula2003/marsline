@@ -1,6 +1,27 @@
 {
- "version": 1,
+ "version": 2,
+ "id": "jezero",
+ "name": "Jezero Crater & delta",
  "region": "Jezero Crater & delta (Nili Fossae, Mars)",
+ "detail": "detailed",
+ "blurb": "Perseverance landing region: delta, crater floor and rim with 75 m terrain, CTX imagery, THEMIS thermal and a USGS geologic map.",
+ "vectors": [
+  "geology",
+  "linear",
+  "craters",
+  "ellipse"
+ ],
+ "defaultLayers": [
+  "ctx",
+  "traversability",
+  "linear",
+  "ellipse"
+ ],
+ "elevEncoding": {
+  "offset": 4096,
+  "scale": 8
+ },
+ "missionMap": "jezero_mission_map.png",
  "crs": "Mars 2000 sphere, lon/lat east-positive",
  "bounds": {
   "west": 76.7959713539945,
@@ -135,6 +156,7 @@
  "layers": [
   {
    "id": "ctx",
+   "base": true,
    "title": "CTX optical mosaic",
    "file": "ctx.jpg",
    "dataType": "OPTICAL",
