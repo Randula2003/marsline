@@ -21,7 +21,7 @@
   "offset": 4096,
   "scale": 8
  },
- "missionMap": "jezero_mission_map.png",
+ "missionMap": "mission_map.png",
  "crs": "Mars 2000 sphere, lon/lat east-positive",
  "bounds": {
   "west": 76.7959713539945,

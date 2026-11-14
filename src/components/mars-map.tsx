@@ -20,6 +20,10 @@ const fmtTime = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(
 const DEFAULT_EVA_H = 8, DEFAULT_SPEED_KMH = WALK_SPEED_KMH; // ASSUMPTIONS the user can adjust in the route panel
 const CLASS_NAME = ["No-go", "Caution", "Nominal"];
 
+function LayerToggle({ title, detail, note, checked, onChange }: { title: string; detail: string; note?: string; checked: boolean; onChange: () => void }) {
+  return <label className="jz-layer"><input type="checkbox" checked={checked} onChange={onChange} /><span><b>{title}</b><small>{detail}</small>{note && <small className="jz-note">{note}</small>}</span></label>;
+}
+
 export default function MarsMap({ waypoints, onSaveRoute }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -305,11 +309,11 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
         <article className="panel">
           <div className="panel-top"><span>DATA LAYERS</span><span className="tag green">{imageLayers.length + (terrain?.meta.vectors.length ?? 0)} LAYERS</span></div>
           <div className="jz-group">IMAGERY · TOPOGRAPHY · THERMAL</div>
-          {imageLayers.filter((l) => l.dataType !== "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small>{l.note && <small className="jz-note">{l.note}</small>}</span></label>)}
+          {imageLayers.filter((l) => l.dataType !== "DERIVED").map((l) => <LayerToggle key={l.id} title={l.title} detail={`${l.dataType} · ${l.resolution}`} note={l.note} checked={!!active[l.id]} onChange={() => toggle(l.id)} />)}
           <div className="jz-group">DERIVED FEATURES</div>
-          {imageLayers.filter((l) => l.dataType === "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small>{l.note && <small className="jz-note">{l.note}</small>}</span></label>)}
+          {imageLayers.filter((l) => l.dataType === "DERIVED").map((l) => <LayerToggle key={l.id} title={l.title} detail={`${l.dataType} · ${l.resolution}`} note={l.note} checked={!!active[l.id]} onChange={() => toggle(l.id)} />)}
           {!!terrain?.meta.vectors.length && <div className="jz-group">GEOLOGY OVERLAYS</div>}
-          {VECTOR_LAYERS.filter((l) => terrain?.meta.vectors.includes(l.id)).map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.note}</small></span></label>)}
+          {VECTOR_LAYERS.filter((l) => terrain?.meta.vectors.includes(l.id)).map((l) => <LayerToggle key={l.id} title={l.title} detail={l.note} checked={!!active[l.id]} onChange={() => toggle(l.id)} />)}
           <label className="jz-opacity">Overlay opacity<input type="range" min={0.15} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></label>
           {active.traversability && <div className="jz-legend"><i style={{ background: "#22c55e" }} />Nominal<i style={{ background: "#f59e0b" }} />Caution<i style={{ background: "#dc2626" }} />No-go</div>}
         </article>

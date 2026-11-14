@@ -10,7 +10,7 @@
   "heightKm": 59,
   "resolutionM": 75,
   "targets": 7,
-  "missionMap": "jezero_mission_map.png"
+  "missionMap": "mission_map.png"
  },
  {
   "id": "isidis-planitia",

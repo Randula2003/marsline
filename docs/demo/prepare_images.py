@@ -15,7 +15,7 @@ def over(base, layer):                                # layer (RGBA) on top of b
     return Image.alpha_composite(base.convert("RGBA"), layer.convert("RGBA").resize(base.size, Image.NEAREST)).convert("RGB")
 
 # 1. hero: the one-page Jezero map (plot area only), portrait crop for the right half of the title slide
-m = Image.open(R / "jezero" / "jezero_mission_map.png").convert("RGB"); W, H = m.size
+m = Image.open(R / "jezero" / "mission_map.png").convert("RGB"); W, H = m.size
 plot = (int(.1005 * W), int(.076 * H), int(.9398 * W), int(.74 * H)); ph = plot[3] - plot[1]; pw = int(ph * 6.4 / 7.5)   # stops above the legend box
 x0 = plot[0] + int(.06 * (plot[2] - plot[0]))
 frac = m.crop((x0, plot[1], x0 + pw, plot[3])); frac.thumbnail((1200, 1400)); frac.save(OUT / "hero.jpg", quality=86)
