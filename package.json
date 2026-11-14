@@ -1,0 +1,37 @@
+{
+  "name": "marsline-mission-intelligence",
+  "version": "4.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "firebase:login": "firebase login",
+    "firebase:use": "firebase use --add",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
+  },
+  "dependencies": {
+    "firebase": "13.3.0",
+    "firebase-admin": "14.5.1",
+    "next": "16.4.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zod": "^4.1.12",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.1",
+    "eslint-config-next": "16.4.6",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "description": "Integrated Mars surface mission planning, NASA science data catalogue, and Firebase-backed workspace."
+}

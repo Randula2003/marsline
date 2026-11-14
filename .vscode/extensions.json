@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "firebase.vscode-firebase-explorer",
+    "ms-vscode.vscode-typescript-next"
+  ]
+}

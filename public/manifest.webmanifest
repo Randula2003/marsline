@@ -1,0 +1,10 @@
+{
+  "name": "Marsline Mission Intelligence",
+  "short_name": "Marsline",
+  "description": "Integrated Mars surface mission planning and NASA science data workspace.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#101318",
+  "theme_color": "#101318",
+  "icons": [{"src":"/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}

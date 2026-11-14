@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Marsline performs database reads/writes through Next.js server routes
+    // after Firebase Admin verifies the caller's Firebase ID token.
+    // The Admin SDK bypasses rules; direct browser access is intentionally denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
