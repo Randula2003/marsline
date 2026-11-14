@@ -45,3 +45,18 @@ test("MEDA time series: four seasons, 24 hours each, physically plausible values
   }
   assert.ok(d.sols[0].summary.windMs && d.sols[1].summary.windMs, "wind exists for the first two sols");
 });
+
+test("rover photos: every listed file exists and carries a credit", () => {
+  const dir = path.join(base, "jezero", "rover"), d = JSON.parse(fs.readFileSync(path.join(dir, "rover.json"), "utf8"));
+  assert.ok(d.images.length >= 8);
+  for (const im of d.images) { assert.ok(fs.existsSync(path.join(dir, im.file)), im.file); assert.ok(/NASA/.test(im.credit)); assert.ok(im.source.startsWith("https://")); }
+});
+
+for (const r of index) {
+  test(`area ${r.id}: has the atmospheric-depth (radiation context) layer`, () => {
+    const meta = JSON.parse(fs.readFileSync(path.join(base, r.id, "meta.json"), "utf8"));
+    const l = meta.layers.find((x) => x.id === "atmosphere");
+    assert.ok(l && l.note && /Context only/.test(l.note), "atmosphere layer with caveat missing");
+    assert.ok(fs.existsSync(path.join(base, r.id, l.file)));
+  });
+}

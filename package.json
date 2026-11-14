@@ -12,7 +12,8 @@
     "firebase:login": "firebase login",
     "firebase:use": "firebase use --add",
     "firebase:deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
-    "test": "node --experimental-strip-types --no-warnings --test \"tests/*.test.mjs\""
+    "test": "node --experimental-strip-types --no-warnings --test \"tests/*.test.mjs\"",
+    "check:firebase": "node scripts/check-firebase.mjs"
   },
   "dependencies": {
     "firebase": "13.3.0",

@@ -47,6 +47,16 @@ node -v
 npm -v
 ```
 
+### Quick Firebase check
+
+Not sure what is missing? Open **Data & Firebase** in the app for a checklist (it never shows your values), or run:
+
+```bash
+npm run check:firebase
+```
+
+It reads `.env.local`, tests a real Firestore write/read/delete and an anonymous sign-in, and prints the exact fix for anything that fails. Add `-- --no-auth-test` to skip the sign-in test (the test creates one anonymous user in your own Firebase project). No Firebase yet? The app runs in demo mode (see below).
+
 ### 2. Create Firebase project
 
 In https://console.firebase.google.com/:
@@ -193,13 +203,17 @@ The map, slope/traversability layers and route planner are driven by files in `p
 
 **Real Perseverance weather (Jezero):** `python scripts/download_meda.py` downloads about 47 MB of MEDA data (one sol per season) from NASA PDS into `data/raw/meda/` (git-ignored). The notebook (section 11b) reduces it to `public/data/regions/jezero/meda_timeseries.json` (about 50 KB), which is **committed**, so the Conditions charts work on a fresh clone with no download.
 
+**Rover photos:** `python scripts/fetch_rover_images.py` saves 8 NASA/JPL-Caltech surface photos (about 0.4 MB, committed) from the same sols as the weather charts. **Radiation context:** every area has an "Atmospheric depth" layer (more atmosphere overhead = slightly more shielding; context only, not a dose).
+
+**Adjustable assumptions:** in the route panel you can tighten the no-go slope, change the walking speed and set a spacewalk limit; the route, time and warnings update immediately.
+
 **What is in git and what is regenerated**
 
 | In git (the app runs from these) | Not in git (only needed to regenerate) |
 |---|---|
-| `public/data/regions/*` (maps, grids, GeoJSON, thumbnails, MEDA JSON), `notebooks/`, `scripts/`, `tests/` | `data/raw/` (zip extracts and MEDA downloads, about 280 MB), `.env.local` (your Firebase keys) |
+| `public/data/regions/*` (maps, grids, GeoJSON, thumbnails, MEDA JSON, rover photos), `notebooks/`, `scripts/`, `tests/`, `.github/workflows/ci.yml` | `data/raw/` (zip extracts and MEDA downloads, about 280 MB), `.env.local` (your Firebase keys) |
 
-Run `npm test` to check the data files and the route planner.
+Run `npm test` to check the data files and the route planner. GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, tests and the production build on every pull request.
 
 **Add another area:** append one line to `REGIONS` in notebook section 14 (id, name, centre lat/lon, half-size in degrees, a short description), then run all cells. The area must lie inside the MOLA tile you have (longitude 0 to 90 °E, latitude 0 to 44 °N). For areas outside that window (for example Gale Crater) you need the matching MOLA tile from https://www.mars.asu.edu/data/ . New areas appear in the app automatically through `public/data/regions/index.json`.
 

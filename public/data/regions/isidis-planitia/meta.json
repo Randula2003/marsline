@@ -145,6 +145,21 @@
    ]
   },
   {
+   "id": "atmosphere",
+   "title": "Atmospheric depth (radiation shielding context)",
+   "file": "atmosphere.png",
+   "dataType": "DERIVED",
+   "source": "Derived from MOLA elevation with an assumed 10.8 km scale height",
+   "resolution": "463 m",
+   "note": "Pressure here is 1.34 to 1.59 times the reference level (areoid). Darker = more atmosphere overhead. Context only, not a dose.",
+   "bounds": [
+    10.3984375,
+    84.4296875,
+    15.40625,
+    89.5703125
+   ]
+  },
+  {
    "id": "traversability",
    "title": "Traversability",
    "file": "traversability.png",

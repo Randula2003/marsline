@@ -17,7 +17,7 @@ const VECTOR_LAYERS = [
 ];
 const SMOOTH_OFF = ["traversability", "science", "slope"];
 const fmtTime = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")} min`;
-const EVA_LIMIT_MIN = 480; // ASSUMPTION: typical suited EVA of about 8 hours
+const DEFAULT_EVA_H = 8, DEFAULT_SPEED_KMH = WALK_SPEED_KMH; // ASSUMPTIONS the user can adjust in the route panel
 const CLASS_NAME = ["No-go", "Caution", "Nominal"];
 
 export default function MarsMap({ waypoints, onSaveRoute }: Props) {
@@ -28,6 +28,9 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
   const [error, setError] = useState("");
   const [active, setActive] = useState<Record<string, boolean>>({ ctx: true, traversability: true, linear: true, ellipse: true });
   const [opacity, setOpacity] = useState(0.7);
+  const [blockOverride, setBlockOverride] = useState<number | null>(null);
+  const [speedKmh, setSpeedKmh] = useState(DEFAULT_SPEED_KMH);
+  const [evaLimitH, setEvaLimitH] = useState(DEFAULT_EVA_H);
   const [start, setStart] = useState<Pt | null>(null);
   const [end, setEnd] = useState<Pt | null>(null);
   const [pickMode, setPickMode] = useState<"start" | "end" | null>(null);
@@ -66,7 +69,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
   }, [regionId]);
   const selectRegion = (id: string) => {
     if (id === regionId) return;
-    setTerrain(null); setVectors(null); setStart(null); setEnd(null); setHover(null); setPickMode(null); setRegionId(id);
+    setTerrain(null); setVectors(null); setStart(null); setEnd(null); setHover(null); setPickMode(null); setBlockOverride(null); setRegionId(id);
   };
 
   useEffect(() => {
@@ -94,7 +97,18 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
     return list;
   }, [terrain, waypoints]);
 
-  const routeResult = useMemo(() => (terrain && start && end && (start.lat !== end.lat || start.lon !== end.lon) ? planRoute(terrain, start, end) : null), [terrain, start, end]);
+  const bakedBlock = terrain?.meta.thresholds.slopeBlockDeg ?? 25;
+  const blockSlope = Math.min(blockOverride ?? bakedBlock, bakedBlock);
+  const routeResult = useMemo(() => (terrain && start && end && (start.lat !== end.lat || start.lon !== end.lon) ? planRoute(terrain, start, end, { blockSlopeDeg: blockSlope, speedKmh }) : null), [terrain, start, end, blockSlope, speedKmh]);
+  // cells that are walkable in the pre-computed map but exceed a stricter no-go slope chosen by the user
+  const stricter = useMemo(() => {
+    if (!terrain || typeof document === "undefined" || blockSlope >= bakedBlock) return null;
+    const c = document.createElement("canvas"); c.width = terrain.w; c.height = terrain.h;
+    const g = c.getContext("2d"); if (!g) return null;
+    const img = g.createImageData(terrain.w, terrain.h), q = blockSlope * 4;
+    for (let i = 0; i < terrain.w * terrain.h; i++) if (terrain.cls[i] !== 0 && terrain.cls[i] !== 255 && terrain.slope[i] >= q) { img.data[i * 4] = 220; img.data[i * 4 + 1] = 38; img.data[i * 4 + 2] = 38; img.data[i * 4 + 3] = 170; }
+    g.putImageData(img, 0, 0); return c;
+  }, [terrain, blockSlope, bakedBlock]);
   const route: Route | null = routeResult && !("error" in routeResult) ? routeResult : null;
   const routeError = routeResult && "error" in routeResult ? routeResult.error : "";
 
@@ -132,6 +146,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
         }
         if (active.ellipse) { ctx.globalAlpha = 1; ctx.setLineDash([6 / z, 4 / z]); ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.6 / z; ctx.stroke(vectors.ellipse); ctx.setLineDash([]); }
       }
+      if (stricter) { ctx.globalAlpha = 1; ctx.imageSmoothingEnabled = false; ctx.drawImage(stricter, 0, 0, terrain.w, terrain.h); }
       ctx.restore(); ctx.globalAlpha = 1;
 
       const sx = (lon: number, lat: number): [number, number] => { const [gx, gy] = cellOf(terrain, lon, lat); return [(gx - ox) * z, (gy - oy) * z]; };
@@ -166,7 +181,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
       label(nice >= 1000 ? `${nice / 1000} km` : `${nice} m`, 22, ch - 30);
     };
     schedule();
-  }, [terrain, vectors, active, opacity, route, start, end, points, imagesReady, schedule]);
+  }, [terrain, vectors, active, opacity, route, start, end, points, imagesReady, stricter, schedule]);
 
   // ---- sizing / fit / wheel ---------------------------------------------------------------------------------------
   const fit = useCallback(() => {
@@ -207,7 +222,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
     const hit = vectors.units.find((u) => ctx.isPointInPath(u.path, gx, gy, "evenodd"));
     ctx.restore(); return hit?.name;
   };
-  const onDown = (e: ReactPointerEvent) => { e.currentTarget.setPointerCapture(e.pointerId); pointers.current.set(e.pointerId, local(e)); gesture.current = { moved: 0, pinch: 0 }; };
+  const onDown = (e: ReactPointerEvent) => { try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* capture can fail for synthetic or already-released pointers */ } pointers.current.set(e.pointerId, local(e)); gesture.current = { moved: 0, pinch: 0 }; };
   const onMove = (e: ReactPointerEvent) => {
     const p = local(e);
     if (!pointers.current.has(e.pointerId)) {
@@ -290,9 +305,9 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
         <article className="panel">
           <div className="panel-top"><span>DATA LAYERS</span><span className="tag green">{imageLayers.length + (terrain?.meta.vectors.length ?? 0)} LAYERS</span></div>
           <div className="jz-group">IMAGERY · TOPOGRAPHY · THERMAL</div>
-          {imageLayers.filter((l) => l.dataType !== "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small></span></label>)}
+          {imageLayers.filter((l) => l.dataType !== "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small>{l.note && <small className="jz-note">{l.note}</small>}</span></label>)}
           <div className="jz-group">DERIVED FEATURES</div>
-          {imageLayers.filter((l) => l.dataType === "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small></span></label>)}
+          {imageLayers.filter((l) => l.dataType === "DERIVED").map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.dataType} · {l.resolution}</small>{l.note && <small className="jz-note">{l.note}</small>}</span></label>)}
           {!!terrain?.meta.vectors.length && <div className="jz-group">GEOLOGY OVERLAYS</div>}
           {VECTOR_LAYERS.filter((l) => terrain?.meta.vectors.includes(l.id)).map((l) => <label className="jz-layer" key={l.id}><input type="checkbox" checked={!!active[l.id]} onChange={() => toggle(l.id)} /><span><b>{l.title}</b><small>{l.note}</small></span></label>)}
           <label className="jz-opacity">Overlay opacity<input type="range" min={0.15} max={1} step={0.05} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} /></label>
@@ -301,6 +316,14 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
 
         <article className="panel">
           <div className="panel-top"><span>TERRAIN-AWARE ROUTE</span><span className="tag orange">A* · SLOPE + GEOLOGY</span></div>
+          <div className="jz-assume">
+            <div className="jz-group">ASSUMPTIONS · ADJUST TO SEE THE EFFECT</div>
+            <label><span>No-go slope <b>{blockSlope}°</b></span><input type="range" min={6} max={Math.round(bakedBlock)} step={1} value={blockSlope} onChange={(e) => setBlockOverride(Number(e.target.value))} /></label>
+            <label><span>Walking speed <b>{speedKmh.toFixed(1)} km/h</b></span><input type="range" min={1.5} max={4.5} step={0.5} value={speedKmh} onChange={(e) => setSpeedKmh(Number(e.target.value))} /></label>
+            <label><span>Spacewalk limit <b>{evaLimitH} h</b></span><input type="range" min={4} max={10} step={1} value={evaLimitH} onChange={(e) => setEvaLimitH(Number(e.target.value))} /></label>
+            <button className="button outline" onClick={() => { setBlockOverride(null); setSpeedKmh(DEFAULT_SPEED_KMH); setEvaLimitH(DEFAULT_EVA_H); }}>RESET TO DEFAULTS</button>
+            {blockSlope < bakedBlock && <p className="fineprint">Stricter no-go slope is drawn in red on the map. You can only tighten the limit; looser limits would need the notebook to be re-run.</p>}
+          </div>
           <div className="jz-fields">
             <label>Start (A)<select value={start?.key ?? ""} onChange={(e) => choose(setStart, e.target.value)}>{optionList.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select></label>
             <button className="button outline" onClick={() => setPickMode("start")}>PICK A ON MAP</button>
@@ -319,10 +342,10 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
               <div><small>ON CAUTION TERRAIN</small><b>{route.cautionPct.toFixed(0)}%</b></div>
               <div><small>STRAIGHT LINE</small><b>{(route.straightM / 1000).toFixed(2)} km</b></div>
             </div>
-            {route.timeMin > EVA_LIMIT_MIN && <p className="jz-verdict warn">Estimated {fmtTime(route.timeMin)} exceeds an assumed {EVA_LIMIT_MIN / 60} h EVA. Split this into several excursions or use a rover.</p>}
+            {route.timeMin > evaLimitH * 60 && <p className="jz-verdict warn">Estimated {fmtTime(route.timeMin)} exceeds your {evaLimitH} h spacewalk limit. Split this into several excursions or use a rover.</p>}
             <p className={`jz-verdict ${route.straightBlocked ? "warn" : ""}`}>{route.straightBlocked ? `The straight line crosses no-go terrain. This route detours ${route.detourPct.toFixed(0)}% to stay on walkable ground.` : `The straight line is walkable; the planned route is ${route.detourPct.toFixed(0)}% longer to favour easier terrain.`}</p>
             {profilePath && <svg className="jz-profile" viewBox="0 0 300 84" role="img" aria-label="Elevation profile along the route"><path d={profilePath.area} fill="rgba(56,189,248,.18)" /><path d={profilePath.line} fill="none" stroke="#38bdf8" strokeWidth="1.6" /><text x="4" y="10" fill="#929eaa" fontSize="7">{Math.round(profilePath.zmax)} m</text><text x="4" y="82" fill="#929eaa" fontSize="7">{Math.round(profilePath.zmin)} m</text></svg>}
-            <p className="fineprint">*Concept estimate: {WALK_SPEED_KMH} km/h on easy ground, scaled by slope, roughness and geology cost. Slope limits: caution ≥ {terrain?.meta.thresholds.slopeCautionDeg}°, no-go ≥ {terrain?.meta.thresholds.slopeBlockDeg}°. Not validated for crew operations.</p>
+            <p className="fineprint">*Concept estimate: {speedKmh} km/h on easy ground, scaled by slope, roughness and geology cost. Slope limits: caution ≥ {terrain?.meta.thresholds.slopeCautionDeg}°, no-go ≥ {blockSlope}°. Not validated for crew operations.</p>
             {onSaveRoute && start && end && <button className="button primary full" disabled={saving} onClick={async () => { setSaving(true); try { await onSaveRoute({ start, end, route }); } finally { setSaving(false); } }}>{saving ? "SAVING…" : "SAVE ROUTE TO MISSION"}</button>}
           </>}
         </article>
