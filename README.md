@@ -220,3 +220,7 @@ Run `npm test` to check the data files and the route planner. GitHub Actions (`.
 The colour and THEMIS PNG mosaics in the zip carry no map coordinates, so they are not used. Jezero's thermal layers come from the USGS database instead.
 
 Slope limits (Jezero 15° caution / 25° no-go; regional 8° / 15° because 463 m cells smooth steep ground), geologic-unit cost multipliers, science scores and the 3 km/h walking speed are concept-level assumptions, not NASA-certified values. Edit them in the notebook and re-run.
+
+## AI assistance (NASA Space Apps disclosure)
+
+This project was built with the help of an AI coding assistant (Claude, by Anthropic, used through Claude Code). The assistant helped write and debug code (the Next.js web app, the Python feature-engineering notebook, scripts and automated tests) and documentation, and its work is recorded in the commit history (`Co-Authored-By` lines). Humans chose the challenge and the goals, and reviewed, ran and tested the results. No AI-generated images, audio or video are used: all images are NASA/JPL-Caltech, ESA, USGS or derived from those data. See `docs/SPACE_APPS_SUBMISSION.md` for the Space Apps submission text.
