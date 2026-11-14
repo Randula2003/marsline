@@ -1,6 +1,7 @@
 "use client";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signInAnonymously, type User } from "firebase/auth";
+import { demoRequest } from "@/lib/demo-store";
 
 const publicConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -45,7 +46,14 @@ export async function getFirebaseUser(): Promise<User> {
   return authUserPromise;
 }
 
+// Demo mode keeps every feature working without cloud setup (data stays in this browser). It switches on automatically when the
+// Firebase web settings are missing, when NEXT_PUBLIC_DEMO_MODE=true, or when the user chooses it from the console.
+let demoMode = false;
+export function isDemoMode(): boolean { return demoMode || process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !isFirebaseClientConfigured(); }
+export function enableDemoMode() { demoMode = true; }
+
 export async function firebaseRequest(path: string, init: RequestInit = {}): Promise<Response> {
+  if (isDemoMode()) return demoRequest(path, init);
   const user = await getFirebaseUser();
   const token = await user.getIdToken();
   const headers = new Headers(init.headers);
