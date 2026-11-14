@@ -49,3 +49,14 @@ test("probe returns null outside the grid and reports slope inside", () => {
   assert.equal(probe(t, -1, 3), null);
   assert.equal(probe(t, 0.5, 0.5).slopeDeg, 5);
 });
+
+test("a stricter no-go slope blocks steep cells and a slower speed lengthens the walk time", () => {
+  const t = grid(20, 20, []);
+  for (let y = 0; y < 20; y++) t.slope[y * 20 + 10] = 20 * 4;                 // a 20 degree ridge across x=10
+  const open = planRoute(t, at(t, 2, 5), at(t, 17, 5));
+  assert.ok(!("error" in open) && open.straightBlocked === false);
+  const strict = planRoute(t, at(t, 2, 5), at(t, 17, 5), { blockSlopeDeg: 15 });
+  assert.ok("error" in strict, "ridge spans the whole grid, so no route under a 15 degree limit");
+  const slow = planRoute(t, at(t, 2, 5), at(t, 8, 5), { speedKmh: 1.5 }), fast = planRoute(t, at(t, 2, 5), at(t, 8, 5), { speedKmh: 3 });
+  assert.ok(Math.abs(slow.timeMin / fast.timeMin - 2) < 0.01);
+});

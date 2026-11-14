@@ -11,7 +11,7 @@ export async function loadRegions(): Promise<RegionInfo[]> {
   return res.json();
 }
 
-export type LayerMeta = { id: string; base?: boolean; title: string; file: string; dataType: string; source: string; resolution: string; bounds?: [number, number, number, number] };
+export type LayerMeta = { id: string; base?: boolean; note?: string; title: string; file: string; dataType: string; source: string; resolution: string; bounds?: [number, number, number, number] };
 export type Target = { id: string; name: string; unit: string; lat: number; lon: number; science: number; slopeDeg: number; elevationM: number; terrainClass: number; reason: string; thumb?: string };
 export type Meta = {
   id: string; name: string; blurb: string; detail: "detailed" | "regional"; vectors: string[]; defaultLayers: string[];
@@ -150,7 +150,7 @@ export const WALK_SPEED_KMH = 3; // ASSUMPTION: nominal suited walking speed on 
 
 const passable = (t: Terrain, i: number) => t.cls[i] !== 0 && t.cls[i] !== 255;
 
-function snap(t: Terrain, gx: number, gy: number): number | null {
+function snap(t: Terrain, gx: number, gy: number, ok: (i: number) => boolean): number | null {
   const cx = Math.min(t.w - 1, Math.max(0, Math.floor(gx))), cy = Math.min(t.h - 1, Math.max(0, Math.floor(gy)));
   let best = -1, bd = Infinity;
   for (let dy = -15; dy <= 15; dy++) for (let dx = -15; dx <= 15; dx++) {
@@ -158,7 +158,7 @@ function snap(t: Terrain, gx: number, gy: number): number | null {
     if (x < 0 || y < 0 || x >= t.w || y >= t.h) continue;
     const i = y * t.w + x;
     const d = dx * dx + dy * dy;
-    if (passable(t, i) && d < bd) { bd = d; best = i; }
+    if (ok(i) && d < bd) { bd = d; best = i; }
   }
   return best < 0 ? null : best;
 }
@@ -187,9 +187,13 @@ class MinHeap {
   }
 }
 
-export function planRoute(t: Terrain, a: LonLat, b: LonLat): Route | { error: string } {
+export type RouteOptions = { blockSlopeDeg?: number; speedKmh?: number };
+
+export function planRoute(t: Terrain, a: LonLat, b: LonLat, opts: RouteOptions = {}): Route | { error: string } {
+  const blockQ = (opts.blockSlopeDeg ?? 99) * 4;                     // slope is stored as degrees x 4
+  const ok = (i: number) => passable(t, i) && t.slope[i] < blockQ;
   const [ax, ay] = cellOf(t, a.lon, a.lat), [bx, by] = cellOf(t, b.lon, b.lat);
-  const s = snap(t, ax, ay), g = snap(t, bx, by);
+  const s = snap(t, ax, ay, ok), g = snap(t, bx, by, ok);
   if (s === null || g === null) return { error: "Start or destination is outside the mapped area or surrounded by no-go terrain." };
   const { w, h } = t, n = w * h, minStep = Math.min(t.dxM, t.dyM), SQ2 = Math.SQRT2;
   const gs = new Float32Array(n).fill(Infinity), prev = new Int32Array(n).fill(-1), done = new Uint8Array(n);
@@ -207,8 +211,8 @@ export function planRoute(t: Terrain, a: LonLat, b: LonLat): Route | { error: st
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
       const j = ny * w + nx;
-      if (done[j] || !passable(t, j)) continue;
-      if (dx && dy && (!passable(t, y * w + nx) || !passable(t, ny * w + x))) continue; // no corner cutting through no-go cells
+      if (done[j] || !ok(j)) continue;
+      if (dx && dy && (!ok(y * w + nx) || !ok(ny * w + x))) continue; // no corner cutting through no-go cells
       const len = Math.hypot(dx * t.dxM, dy * t.dyM);
       const ng = gs[i] + len * (t.cost[i] + t.cost[j]) / 80;
       if (ng < gs[j]) { gs[j] = ng; prev[j] = i; heap.push(ng + hFn(j), j); }
@@ -220,7 +224,7 @@ export function planRoute(t: Terrain, a: LonLat, b: LonLat): Route | { error: st
   for (let i = g; i !== -1; i = prev[i]) cells.push(i);
   cells.reverse();
   let dist = 0, time = 0, gain = 0, loss = 0, slopeSum = 0, maxSlope = 0, caution = 0;
-  const speedMperMin = WALK_SPEED_KMH * 1000 / 60;
+  const speedMperMin = (opts.speedKmh ?? WALK_SPEED_KMH) * 1000 / 60;
   const profile: Route["profile"] = [];
   cells.forEach((i, k) => {
     const sl = t.slope[i] / 4; slopeSum += sl; maxSlope = Math.max(maxSlope, sl); if (t.cls[i] === 1) caution++;
@@ -238,7 +242,7 @@ export function planRoute(t: Terrain, a: LonLat, b: LonLat): Route | { error: st
   const steps = Math.max(2, Math.ceil(Math.hypot(bx - ax, by - ay) * 2));
   for (let k = 0; k <= steps && !blocked; k++) {
     const x = Math.floor(ax + (bx - ax) * k / steps), y = Math.floor(ay + (by - ay) * k / steps);
-    if (x >= 0 && y >= 0 && x < w && y < h && !passable(t, y * w + x)) blocked = true;
+    if (x >= 0 && y >= 0 && x < w && y < h && !ok(y * w + x)) blocked = true;
   }
   return {
     points, distM: dist, timeMin: time, maxSlopeDeg: maxSlope, meanSlopeDeg: slopeSum / cells.length, gainM: gain, lossM: loss,

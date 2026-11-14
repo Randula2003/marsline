@@ -255,6 +255,21 @@
    "resolution": "map scale 1:75,000"
   },
   {
+   "id": "atmosphere",
+   "title": "Atmospheric depth (radiation shielding context)",
+   "file": "atmosphere.png",
+   "dataType": "DERIVED",
+   "source": "Derived from elevation with an assumed 10.8 km scale height",
+   "resolution": "75 m",
+   "note": "Pressure here is 1.14 to 1.33 times the reference level (areoid). Darker = more atmosphere overhead. Context only, not a dose.",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  },
+  {
    "id": "science",
    "title": "Science value",
    "file": "science.png",
