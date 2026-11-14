@@ -63,7 +63,8 @@
    "slopeDeg": 0.2,
    "elevationM": -2475,
    "terrainClass": 2,
-   "reason": "Delta deposit: water-lain sediments, prime astrobiology target"
+   "reason": "Delta deposit: water-lain sediments, prime astrobiology target",
+   "thumb": "thumbs/T1.jpg"
   },
   {
    "id": "T2",
@@ -75,7 +76,8 @@
    "slopeDeg": 2.6,
    "elevationM": -2456,
    "terrainClass": 2,
-   "reason": "Younger delta deposit: stratigraphy of the Jezero lake system"
+   "reason": "Younger delta deposit: stratigraphy of the Jezero lake system",
+   "thumb": "thumbs/T2.jpg"
   },
   {
    "id": "T4",
@@ -87,7 +89,8 @@
    "slopeDeg": 1.0,
    "elevationM": -2090,
    "terrainClass": 1,
-   "reason": "Layered, eroded bedrock: mineral-rich layers"
+   "reason": "Layered, eroded bedrock: mineral-rich layers",
+   "thumb": "thumbs/T4.jpg"
   },
   {
    "id": "T5",
@@ -99,7 +102,8 @@
    "slopeDeg": 1.6,
    "elevationM": -2723,
    "terrainClass": 2,
-   "reason": "Layered, eroded bedrock: older record"
+   "reason": "Layered, eroded bedrock: older record",
+   "thumb": "thumbs/T5.jpg"
   },
   {
    "id": "T3",
@@ -111,7 +115,8 @@
    "slopeDeg": 4.7,
    "elevationM": -1890,
    "terrainClass": 1,
-   "reason": "Fan deposit outside the crater"
+   "reason": "Fan deposit outside the crater",
+   "thumb": "thumbs/T3.jpg"
   },
   {
    "id": "T7",
@@ -123,7 +128,8 @@
    "slopeDeg": 11.4,
    "elevationM": -1752,
    "terrainClass": 1,
-   "reason": "Uplifted ancient crust (megabreccia): steep, blocky"
+   "reason": "Uplifted ancient crust (megabreccia): steep, blocky",
+   "thumb": "thumbs/T7.jpg"
   },
   {
    "id": "T6",
@@ -135,7 +141,8 @@
    "slopeDeg": 0.7,
    "elevationM": -2606,
    "terrainClass": 2,
-   "reason": "Crater floor: flat, easy access, igneous/sedimentary mix"
+   "reason": "Crater floor: flat, easy access, igneous/sedimentary mix",
+   "thumb": "thumbs/T6.jpg"
   }
  ],
  "traversabilityShare": {

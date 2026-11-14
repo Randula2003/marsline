@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
+import NextImage from "next/image";
 import { WALK_SPEED_KMH, cellOf, loadRegions, loadTerrain, loadVectors, planRoute, probe, type Probe, type RegionInfo, type Route, type Terrain, type Vectors } from "@/lib/terrain";
 
 type Waypoint = { id: string; name: string; type: string; latitudeDeg: number | string; longitudeDeg: number | string };
-type Pt = { key: string; label: string; lat: number; lon: number; kind: "base" | "target" | "waypoint" | "custom"; detail?: string; science?: number };
+type Pt = { key: string; label: string; lat: number; lon: number; kind: "base" | "target" | "waypoint" | "custom"; detail?: string; science?: number; thumb?: string };
 export type RouteSave = { start: Pt; end: Pt; route: Route };
 type Props = { waypoints: Waypoint[]; onSaveRoute?: (save: RouteSave) => Promise<void> };
 
@@ -59,7 +60,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
       setActive(Object.fromEntries(t.meta.defaultLayers.map((id) => [id, true])));
       setStart({ key: "base", label: t.meta.start.name, lat: t.meta.start.lat, lon: t.meta.start.lon, kind: "base" });
       const first = t.meta.targets[0];
-      setEnd(first ? { key: first.id, label: `${first.id} · ${first.name}`, lat: first.lat, lon: first.lon, kind: "target", detail: first.reason, science: first.science } : null);
+      setEnd(first ? { key: first.id, label: `${first.id} · ${first.name}`, lat: first.lat, lon: first.lon, kind: "target", detail: first.reason, science: first.science, thumb: first.thumb } : null);
     }).catch((e) => alive && setError(e instanceof Error ? e.message : "Unable to load map layers"));
     return () => { alive = false; };
   }, [regionId]);
@@ -84,7 +85,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
     if (!terrain) return [];
     const m = terrain.meta;
     const list: Pt[] = [{ key: "base", label: m.start.name, lat: m.start.lat, lon: m.start.lon, kind: "base" }];
-    m.targets.forEach((t) => list.push({ key: t.id, label: `${t.id} · ${t.name}`, lat: t.lat, lon: t.lon, kind: "target", detail: t.reason, science: t.science }));
+    m.targets.forEach((t) => list.push({ key: t.id, label: `${t.id} · ${t.name}`, lat: t.lat, lon: t.lon, kind: "target", detail: t.reason, science: t.science, thumb: t.thumb }));
     waypoints.forEach((w) => {
       const lat = Number(w.latitudeDeg), lon = Number(w.longitudeDeg);
       const [gx, gy] = cellOf(terrain, lon, lat);
@@ -306,6 +307,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
             <label>Destination (B)<select value={end?.key ?? ""} onChange={(e) => choose(setEnd, e.target.value)}>{optionList.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</select></label>
             <button className="button outline" onClick={() => setPickMode("end")}>PICK B ON MAP</button>
           </div>
+          {end?.thumb && terrain && <NextImage className="jz-thumb" src={`${terrain.base}/${end.thumb}`} alt={`Orbital CTX view around ${end.label}, about 3 km wide`} width={480} height={480} loading="eager" unoptimized />}
           {end?.detail && <p className="jz-why"><b>Why go there:</b> {end.detail}{end.science !== undefined ? ` · science value ${end.science.toFixed(2)}` : ""}</p>}
           {routeError && <div className="fetch-result error">{routeError}</div>}
           {route && <>

@@ -5,6 +5,7 @@ import { MEDA_INDEXES, type MedaSensor, NASA_DATASETS, MARS_MEAN_RADIUS_KM } fro
 import { enableDemoMode, firebaseRequest, isDemoMode } from "@/lib/firebase-client";
 import { resetDemoData } from "@/lib/demo-store";
 import MarsMap, { type RouteSave } from "@/components/mars-map";
+import MedaCharts from "@/components/meda-charts";
 
 type Waypoint = { id: string; name: string; type: string; latitudeDeg: number | string; longitudeDeg: number | string; notes?: string | null; sequence?: number };
 type LogEntry = { id: string; title: string; note: string; logType: string; occurredAt: string };
@@ -269,9 +270,10 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
           <Notice title="Where this data comes from">Layers were engineered offline by <code>notebooks/01_feature_engineering.ipynb</code>. Jezero uses Mars Express HRSC elevation (75 m), MRO CTX imagery, Mars Odyssey THEMIS and the USGS geologic map (SIM 3464). The other areas use the global MGS MOLA elevation tile (463 m) only, so their slopes are smoothed and their targets are relief-derived. Slope limits and scores are concept-level assumptions, not NASA-certified mobility limits. Coordinates use the Mars 2000 sphere, east-positive longitude.</Notice>
         </>}
         {view === "conditions" && <>
-          <PageHead eyebrow="SURFACE ENVIRONMENT · IN-SITU ARCHIVE" title="Current conditions" desc="Retrieve the published MEDA archive indexes and record retrieval metadata." />
+          <PageHead eyebrow="SURFACE ENVIRONMENT · IN-SITU ARCHIVE" title="Current conditions" desc="Measured Perseverance conditions for four seasons, plus live retrieval of the published MEDA archive indexes." />
           <div className="data-warning"><b>Not a live global weather feed.</b> MEDA measures conditions at the Perseverance rover site. PDS indexes catalogue archived products; row counts are not measurements or forecasts.</div>
           <div className="data-banner"><div><span className="overline">OBSERVATION PLATFORM</span><h2>Perseverance · MEDA</h2><p>Mars Environmental Dynamics Analyzer. PDS publishes separate calibrated and derived product indexes for the instrument suite.</p></div><a className="button outline" href="https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/meda.html" target="_blank" rel="noreferrer">PDS MEDA DOCUMENTATION ↗</a></div>
+          <MedaCharts />
           <SectionTitle eyebrow="PDS CSV PRODUCT INDEXES" title="Retrieve source indexes" note="Successful fetches are recorded in Firestore" />
           <div className="metric-grid three">{(Object.keys(MEDA_INDEXES) as MedaSensor[]).map((sensor) => {
             const result = meda[sensor]; const config = MEDA_INDEXES[sensor];
@@ -279,7 +281,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
               {result && "error" in result ? <div className="fetch-result error">{result.error}</div> : result ? <div className="fetch-result"><b>{result.rowCount.toLocaleString()} index records</b><small>Retrieved {dateText(result.retrievedAt)}</small><small>{(result.byteCount / 1024).toFixed(1)} KB · HTTP {result.httpStatus}</small><small>{result.sourceLastModified ?? "Source modification date not provided"}</small></div> : <div className="fetch-empty">Not retrieved in this session</div>}
               <button className="button primary full" disabled={busySensor === sensor} onClick={() => loadMeda(sensor)}>{busySensor === sensor ? "FETCHING…" : "FETCH PDS INDEX →"}</button><a className="source-link" href={config.url} target="_blank" rel="noreferrer">OPEN ORIGINAL CSV ↗</a></article>;
           })}</div>
-          <Notice title="What this integration retrieves">This connects to NASA&apos;s published PDS CSV product indexes. It records status, HTTP code, row count, bytes, source modified header and retrieval time in Firestore. It does not yet download every underlying calibrated product file or parse sensor measurements into environmental time-series records.</Notice>
+          <Notice title="What this page shows">The charts above use real Perseverance MEDA measurements (pressure, humidity, local and ground temperature, wind) for one sample sol in each of four seasons, prepared by the notebook from NASA PDS data and saved in this repository. The cards below connect live to NASA&apos;s published PDS CSV product indexes and record status, HTTP code, row count, size and retrieval time. They list which products exist; they are not measurements. Conditions are local to the rover and are not a forecast for any route.</Notice>
         </>}
         {view === "science" && <>
           <PageHead eyebrow="MULTI-MISSION SCIENCE CONTEXT" title="Science data layers" desc="Catalogue optical, thermal, spectral, topographic, atmospheric, radar and rover-local products." right={<a className="button primary" href="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars" target="_blank" rel="noreferrer">WMTS DOCUMENTATION ↗</a>} />
@@ -323,6 +325,11 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
           <PageHead eyebrow="SPACE ENVIRONMENT · ARCHIVAL SCIENCE" title="Radiation context" desc="Inspect the NASA instruments contributing to the radiation picture; do not infer a crew dose from an unvalidated summary." />
           <div className="data-banner"><div><span className="overline">SURFACE IN-SITU INSTRUMENT</span><h2>Curiosity · RAD</h2><p>The Radiation Assessment Detector measured energetic particle radiation at Gale Crater. Perseverance MEDA RDS is a different instrument and its products must not be treated as interchangeable.</p></div><span className="rad-symbol">☢</span></div>
           <div className="metric-grid three"><DatasetCard instrument="RAD" title="Curiosity Radiation Assessment Detector" kind="RADIATION" detail="Surface particle radiation archive from Gale Crater." url="https://pds.nasa.gov/" /><DatasetCard instrument="MEDA RDS" title="Radiation and Dust Sensor" kind="UV / DUST" detail="Perseverance MEDA archive products; inspect instrument documentation for parameter definitions." url="https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/meda.html" /><DatasetCard instrument="MAVEN" title="Mars atmospheric / solar interaction" kind="ORBITAL" detail="Plasma, magnetic field and solar-wind interaction archive." url="https://pds-ppi.igpp.ucla.edu/" /></div>
+          <article className="panel"><div className="panel-top"><span>PUBLISHED MEASUREMENTS · CONTEXT ONLY</span><span className="tag orange">NOT A CREW DOSE</span></div>
+            <div className="data-line"><span>Earth natural background (world average)</span><b>≈ 2.4 mSv per year · ≈ 0.007 mSv/day</b></div>
+            <div className="data-line"><span>Mars surface, galactic cosmic rays</span><b>≈ 0.64 mSv/day</b></div>
+            <div className="data-line"><span>Cruise from Earth to Mars</span><b>≈ 1.8 mSv/day</b></div>
+            <p className="fineprint">Sources: Curiosity RAD at Gale Crater (Hassler et al., 2014, Science 343); MSL RAD during cruise (Zeitlin et al., 2013, Science 340); UNSCEAR for the Earth average. Values are rounded; check the papers before quoting them. Gale Crater is much lower than Jezero, so the atmosphere overhead differs, and solar particle events can raise dose rates sharply. Do not copy these numbers to another site or use them as a crew dose.</p></article>
           <Notice title="No invented dose estimate">This app does not calculate or certify astronaut dose. Interpretation depends on instrument type, energy spectrum, time, shielding, solar-event context and validated mission dosimetry.</Notice>
         </>}
         {view === "watch" && <>

@@ -20,3 +20,6 @@ data/raw/
 anaconda_projects/
 AGENTS.md
 .ipynb_checkpoints/
+
+# build artifacts
+tsconfig.tsbuildinfo
