@@ -51,12 +51,21 @@ Marsline is an interactive map and route planner that a Mars astronaut could use
 ```
 
 ### Link to Project Demo
-`[URL of your 7-slide deck or 30-second video]` (outline and script in section 4).
+The 7-slide deck is already built (it is in this repository, as an editable PowerPoint and a PDF). Paste this public link, which opens the PDF in the browser with no login:
+```
+https://github.com/Randula2003/marsline/blob/main/docs/demo/Marsline_SpaceApps_Demo.pdf
+```
+- This link works **after the pull request is merged into `main`**. Until then use the branch link: https://github.com/Randula2003/marsline/blob/feature/jezero-data-layers/docs/demo/Marsline_SpaceApps_Demo.pdf
+- Safest: also upload the PDF to Google Drive (Share, "Anyone with the link") and use that link, because it does not depend on the repository.
+- Before submitting, **put your team name and member names on slide 1** (the guide requires them): edit `Marsline_SpaceApps_Demo.pptx` in PowerPoint (or change `TEAM_NAME` and `MEMBERS` at the top of `docs/demo/build_deck.py` and rebuild), export a new PDF, and replace the file.
 
 ### Link to Final Project
-Use both if you can:
-- Live app: `[your deployed URL]` (the app runs without any keys, so it deploys as-is; see section 6)
-- Code: https://github.com/Randula2003/marsline (public)
+Paste both lines:
+```
+Live app: [your deployed URL]
+Code: https://github.com/Randula2003/marsline
+```
+The code link is public and ready. The live app needs a one-time deploy from your own account (section 6); the app needs no keys, so it works as-is. Also type the live URL on slide 7 of the deck.
 
 ### Detailed Project Description
 ```
@@ -137,6 +146,8 @@ Each is scored 1 to 5 at every judging level. Use these points in the descriptio
 
 ### Option A: 7-slide deck (max 7 including title). Required content: team name, member names, the challenge you chose.
 
+**Built and ready:** `docs/demo/Marsline_SpaceApps_Demo.pptx` (editable, with speaker notes) and `docs/demo/Marsline_SpaceApps_Demo.pdf`. Rebuild with `python docs/demo/prepare_images.py && python docs/demo/build_deck.py` (needs `pip install python-pptx pillow`). The outline it follows:
+
 1. **Title.** Marsline, tagline, team name, member names, "Interplanetary Survival Guide: Martian Map". Background: the one-page Jezero map (`public/data/regions/jezero/jezero_mission_map.png`).
 2. **The problem.** The first Mars astronauts need a map for a single walk, not a whole planet. Global tools do not show safe routes, conditions and what the ground looks like.
 3. **Our solution.** Screenshot of the layered map with the traversability layer and a route.
@@ -174,7 +185,7 @@ The repository README now has an "AI assistance" section and commit messages car
 
 - [ ] Every team member is registered for the same Local Event and shows on the Members tab.
 - [ ] All eight fields filled in, in English; `[brackets]` above replaced.
-- [ ] Demo is within **7 slides or 30 seconds**, link public, tested in a private window.
+- [ ] Demo is within **7 slides or 30 seconds**, link public, tested in a private window. Team name and members are on slide 1; the live URL is on slide 7.
 - [ ] Final project link opens with no login. The GitHub repository is public (verified on 14 Nov 2026). A live link is stronger: the app needs no keys, so deploying the GitHub repository to Vercel (New Project, import the repository, keep defaults) or Firebase App Hosting works, then paste the URL.
 - [ ] Optional: FortiGuard classification for the live site.
 - [ ] Paste 3 to 5 images into the description (JPG/PNG/GIF, up to 10 MB each): the Jezero mission map, a route screenshot, the MEDA chart, a rover photo.
