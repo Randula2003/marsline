@@ -26,3 +26,6 @@ tsconfig.tsbuildinfo
 
 # Office lock files
 ~$*
+
+# private notes (not published)
+local-notes/
