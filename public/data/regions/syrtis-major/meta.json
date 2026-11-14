@@ -1,0 +1,174 @@
+{
+ "version": 2,
+ "id": "syrtis-major",
+ "name": "Syrtis Major \u00b7 Nili Patera",
+ "region": "Syrtis Major \u00b7 Nili Patera",
+ "detail": "regional",
+ "blurb": "Dark volcanic highland with the Nili Patera caldera, a dune field and silica-rich deposits seen from orbit.",
+ "vectors": [],
+ "defaultLayers": [
+  "hillshade",
+  "elevation",
+  "traversability"
+ ],
+ "elevEncoding": {
+  "offset": 8192,
+  "scale": 4
+ },
+ "missionMap": "mission_map.png",
+ "gridBounds": [
+  7.296875,
+  65.78125,
+  10.3046875,
+  68.8203125
+ ],
+ "bounds": {
+  "west": 65.78125,
+  "east": 68.8203125,
+  "south": 7.296875,
+  "north": 10.3046875
+ },
+ "grid": {
+  "width": 389,
+  "height": 385,
+  "dlon": 0.0078125,
+  "dlat": 0.0078125,
+  "stepM": 463,
+  "mPerDeg": 59274.69752330622
+ },
+ "thresholds": {
+  "slopeBlockDeg": 15.0,
+  "slopeCautionDeg": 8.0,
+  "roughCautionM": 10.5
+ },
+ "encoding": {
+  "grid_data.png": "R=slope*4 (deg), G=route cost*40, B=class 0 no-go/1 caution/2 nominal",
+  "grid_elev.png": "(R*256+G)/4 - 8192 = elevation metres"
+ },
+ "start": {
+  "id": "BASE",
+  "name": "Flattest wide plain (base candidate)",
+  "lat": 8.75391,
+  "lon": 67.47266
+ },
+ "targets": [
+  {
+   "name": "Nili Patera caldera",
+   "unit": "landmark",
+   "lat": 8.80078,
+   "lon": 67.30078,
+   "science": 0.8,
+   "reason": "Volcanic caldera at the centre of this area",
+   "slopeDeg": 0.8,
+   "elevationM": 167,
+   "terrainClass": 2,
+   "id": "T1"
+  },
+  {
+   "name": "Lowest walkable floor",
+   "unit": "relief-derived",
+   "lat": 8.72266,
+   "lon": 67.27734,
+   "science": 0.7,
+   "reason": "Deepest flat ground in the area: basin-floor deposits collect here",
+   "slopeDeg": 0.4,
+   "elevationM": 68,
+   "terrainClass": 2,
+   "id": "T2"
+  },
+  {
+   "name": "Highest walkable ground",
+   "unit": "relief-derived",
+   "lat": 8.73047,
+   "lon": 67.77734,
+   "science": 0.6,
+   "reason": "Rim/summit viewpoint with the widest exposure of older terrain",
+   "slopeDeg": 3.0,
+   "elevationM": 507,
+   "terrainClass": 1,
+   "id": "T3"
+  },
+  {
+   "name": "Steepest walkable slope",
+   "unit": "relief-derived",
+   "lat": 9.48828,
+   "lon": 67.01953,
+   "science": 0.5,
+   "reason": "Escarpment where layering may be exposed (confirm with imagery)",
+   "slopeDeg": 15.0,
+   "elevationM": 738,
+   "terrainClass": 1,
+   "id": "T4"
+  }
+ ],
+ "traversabilityShare": {
+  "nogo": 0.00560878709978967,
+  "caution": 0.08140086134944746,
+  "nominal": 0.9129903515507629
+ },
+ "molaCheck": null,
+ "elevationRangeM": [
+  68,
+  2637
+ ],
+ "assumptions": "Regional 463 m MOLA cells: slope limits (8 deg caution, 15 deg no-go), science scores and walking speed are concept-level assumptions. Targets are relief-derived candidates, not mapped geology.",
+ "layers": [
+  {
+   "id": "hillshade",
+   "base": true,
+   "title": "MOLA hillshade",
+   "file": "hillshade.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "MGS MOLA 128 ppd (computed hillshade)",
+   "resolution": "463 m",
+   "bounds": [
+    7.296875,
+    65.78125,
+    10.3046875,
+    68.8203125
+   ]
+  },
+  {
+   "id": "elevation",
+   "title": "Elevation",
+   "file": "elevation.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "MGS MOLA gridded topography",
+   "resolution": "463 m",
+   "bounds": [
+    7.296875,
+    65.78125,
+    10.3046875,
+    68.8203125
+   ]
+  },
+  {
+   "id": "slope",
+   "title": "Slope",
+   "file": "slope.png",
+   "dataType": "DERIVED",
+   "source": "Derived from MOLA (Horn)",
+   "resolution": "463 m",
+   "bounds": [
+    7.296875,
+    65.78125,
+    10.3046875,
+    68.8203125
+   ]
+  },
+  {
+   "id": "traversability",
+   "title": "Traversability",
+   "file": "traversability.png",
+   "dataType": "DERIVED",
+   "source": "Slope + roughness (regional limits)",
+   "resolution": "463 m",
+   "bounds": [
+    7.296875,
+    65.78125,
+    10.3046875,
+    68.8203125
+   ]
+  }
+ ]
+}

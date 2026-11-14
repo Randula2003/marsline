@@ -11,3 +11,12 @@ service-account*.json
 *-firebase-adminsdk-*.json
 .DS_Store
 *.log
+
+# raw NASA/USGS downloads (hundreds of MB)
+data/raw/
+
+# local tooling
+.claude/
+anaconda_projects/
+AGENTS.md
+.ipynb_checkpoints/

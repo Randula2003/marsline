@@ -23,7 +23,6 @@ users/{uid}
   missions/ARES-FS-01
     waypoints/{waypointId}
     logs/{logId}
-    messages/{messageId}
     lifeSupport/{snapshotId}
     nasaDatasets/{productCode}
     scienceTargets/{targetId}
@@ -126,9 +125,6 @@ All routes except static UI resources require `Authorization: Bearer <Firebase I
 - `GET /api/life-support` / `POST /api/life-support` — get/save clearly simulated resource snapshots.
 - `GET /api/nasa/catalog` — load the user's Firestore dataset catalogue.
 - `GET /api/nasa/meda/:sensor` — fetch an allowlisted MEDA PDS CSV product index (`ATS`, `WIND`, `PS`, `RDS`, `RHS`, `TIRS`) and save retrieval metadata in Firestore.
-- `GET /api/messages` / `POST /api/messages` — list or save simulated astronaut-to-station messages in the authenticated user's workspace.
-
-Mission communications are a Firestore simulator only. Messages are not transmitted over a spacecraft radio link and are not delivered to a separate station account.
 
 ## NASA data scope
 
@@ -148,7 +144,7 @@ NASA Mars Trek is embedded as an external interactive viewer. Waypoint coordinat
 - Firebase Admin credentials are server-only and never bundled into the browser.
 - Anonymous Firebase Authentication creates a stable UID for that browser installation. If a user clears browser storage or uses another device, anonymous accounts are not automatically linked; enable and implement an account-linking provider before relying on cross-device identity.
 - Firestore Rules deny all direct client reads and writes. API routes verify Firebase ID tokens and scope all application data by UID.
-- The MEDA index proxy is limited to 12 requests per Firebase UID per minute and 2 MiB per upstream response. Add Firebase App Check, broader API throttling, monitoring and account linking before public production deployment.
+- Add App Check, request throttling, monitoring and account linking before public production deployment.
 - NASA endpoints can change availability or impose rate limits. Check the official source metadata and terms before a public challenge submission.
 
 ## Project structure
@@ -168,3 +164,25 @@ apphosting.yaml            Firebase App Hosting runtime config
 ```
 
 This is a research prototype and is not flight-certified mission software. Resource models, mission-status values and distance estimates are not real crew safety advice.
+
+## Study-area data pipeline (feature engineering)
+
+The map, slope/traversability layers and route planner are driven by files in `public/data/regions/<area>/`, which are **generated** from the NASA/USGS raw data by a notebook:
+
+1. Put `Marsline_NASA_Resources.zip` in `~/Downloads` (or set the `MARSLINE_ZIP` environment variable).
+2. Open `notebooks/01_feature_engineering.ipynb` in Jupyter (Anaconda) and run all cells. It needs `geopandas pyogrio pyproj shapely tifffile imagecodecs` in addition to the usual numpy/scipy/pandas/Pillow/matplotlib; the first cell tells you what to install if something is missing.
+3. Raw extracts go to `data/raw/` (git-ignored, about 230 MB). Outputs (about 20 MB) go to `public/data/regions/`.
+4. Run `npm run dev` and open **Surface map**. Pick an area from the tabs above the map.
+
+**Areas included**
+
+| Area | Scale | Data |
+|---|---|---|
+| Jezero Crater & delta | detailed, 75 m | HRSC elevation, CTX imagery, THEMIS day/night IR, USGS geologic map, MOLA cross-check, MEDA index coverage |
+| Nili Fossae, Syrtis Major (Nili Patera), Isidis Planitia | regional, 463 m | MGS MOLA elevation only: hillshade, slope, traversability, relief-derived targets, routes |
+
+**Add another area:** append one line to `REGIONS` in notebook section 14 (id, name, centre lat/lon, half-size in degrees, a short description), then run all cells. The area must lie inside the MOLA tile you have (longitude 0 to 90 °E, latitude 0 to 44 °N). For areas outside that window (for example Gale Crater) you need the matching MOLA tile from https://www.mars.asu.edu/data/ . New areas appear in the app automatically through `public/data/regions/index.json`.
+
+The colour and THEMIS PNG mosaics in the zip carry no map coordinates, so they are not used. Jezero's thermal layers come from the USGS database instead.
+
+Slope limits (Jezero 15° caution / 25° no-go; regional 8° / 15° because 463 m cells smooth steep ground), geologic-unit cost multipliers, science scores and the 3 km/h walking speed are concept-level assumptions, not NASA-certified values. Edit them in the notebook and re-run.
