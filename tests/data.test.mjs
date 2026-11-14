@@ -27,3 +27,21 @@ for (const r of index) {
     assert.ok(meta.defaultLayers.every((id) => meta.layers.some((l) => l.id === id) || meta.vectors.includes(id)), "default layer unknown");
   });
 }
+
+test("MEDA time series: four seasons, 24 hours each, physically plausible values", () => {
+  const d = JSON.parse(fs.readFileSync(path.join(base, "jezero", "meda_timeseries.json"), "utf8"));
+  assert.equal(d.sols.length, 4);
+  assert.deepEqual(d.sols.map((s) => s.sol), [51, 247, 410, 552]);
+  for (const s of d.sols) {
+    assert.equal(s.hours.length, 24);
+    for (const h of s.hours) {
+      if (h.pressurePa !== undefined) assert.ok(h.pressurePa > 400 && h.pressurePa < 1100, `pressure ${h.pressurePa}`);
+      for (const k of ["localTempK", "groundTempK"]) if (h[k] !== undefined) assert.ok(h[k] > 140 && h[k] < 320, `${k} ${h[k]}`);
+      if (h.humidityPct !== undefined) assert.ok(h.humidityPct >= 0 && h.humidityPct <= 110);
+      if (h.windMs !== undefined) assert.ok(h.windMs >= 0 && h.windMs < 60);
+    }
+    assert.ok(s.hours.filter((h) => h.pressurePa !== undefined).length >= 20, "pressure covers most of the day");
+    assert.ok(s.summary.groundTempK, "ground temperature present");
+  }
+  assert.ok(d.sols[0].summary.windMs && d.sols[1].summary.windMs, "wind exists for the first two sols");
+});

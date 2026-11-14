@@ -191,6 +191,16 @@ The map, slope/traversability layers and route planner are driven by files in `p
 | Jezero Crater & delta | detailed, 75 m | HRSC elevation, CTX imagery, THEMIS day/night IR, USGS geologic map, MOLA cross-check, MEDA index coverage |
 | Nili Fossae, Syrtis Major (Nili Patera), Isidis Planitia | regional, 463 m | MGS MOLA elevation only: hillshade, slope, traversability, relief-derived targets, routes |
 
+**Real Perseverance weather (Jezero):** `python scripts/download_meda.py` downloads about 47 MB of MEDA data (one sol per season) from NASA PDS into `data/raw/meda/` (git-ignored). The notebook (section 11b) reduces it to `public/data/regions/jezero/meda_timeseries.json` (about 50 KB), which is **committed**, so the Conditions charts work on a fresh clone with no download.
+
+**What is in git and what is regenerated**
+
+| In git (the app runs from these) | Not in git (only needed to regenerate) |
+|---|---|
+| `public/data/regions/*` (maps, grids, GeoJSON, thumbnails, MEDA JSON), `notebooks/`, `scripts/`, `tests/` | `data/raw/` (zip extracts and MEDA downloads, about 280 MB), `.env.local` (your Firebase keys) |
+
+Run `npm test` to check the data files and the route planner.
+
 **Add another area:** append one line to `REGIONS` in notebook section 14 (id, name, centre lat/lon, half-size in degrees, a short description), then run all cells. The area must lie inside the MOLA tile you have (longitude 0 to 90 °E, latitude 0 to 44 °N). For areas outside that window (for example Gale Crater) you need the matching MOLA tile from https://www.mars.asu.edu/data/ . New areas appear in the app automatically through `public/data/regions/index.json`.
 
 The colour and THEMIS PNG mosaics in the zip carry no map coordinates, so they are not used. Jezero's thermal layers come from the USGS database instead.
