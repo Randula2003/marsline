@@ -12,7 +12,7 @@ export async function loadRegions(): Promise<RegionInfo[]> {
 }
 
 export type LayerMeta = { id: string; base?: boolean; title: string; file: string; dataType: string; source: string; resolution: string; bounds?: [number, number, number, number] };
-export type Target = { id: string; name: string; unit: string; lat: number; lon: number; science: number; slopeDeg: number; elevationM: number; terrainClass: number; reason: string };
+export type Target = { id: string; name: string; unit: string; lat: number; lon: number; science: number; slopeDeg: number; elevationM: number; terrainClass: number; reason: string; thumb?: string };
 export type Meta = {
   id: string; name: string; blurb: string; detail: "detailed" | "regional"; vectors: string[]; defaultLayers: string[];
   elevEncoding: { offset: number; scale: number }; missionMap: string;
@@ -35,8 +35,8 @@ export const lonLatOf = (t: Terrain, gx: number, gy: number): [number, number] =
 
 async function pixels(url: string): Promise<ImageData> {
   const img = new Image();
-  img.src = url;
-  await img.decode();
+  // onload (not img.decode()) so loading also completes while the tab is in the background
+  await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = () => reject(new Error(`Could not load ${url}`)); img.src = url; });
   const c = document.createElement("canvas");
   c.width = img.naturalWidth; c.height = img.naturalHeight;
   const ctx = c.getContext("2d", { willReadFrequently: true });
