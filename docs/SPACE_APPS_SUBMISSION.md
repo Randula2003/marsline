@@ -7,6 +7,20 @@ Official format source: the 2026 [Project Submission Guide](https://www.spaceapp
 
 ---
 
+## 0. Colombo 2026 local event: what applies to you
+
+From the *Colombo 2026 Contestant Guide to Judging & Awards* and the *Components of Project* sheet.
+
+| Topic | Rule |
+|---|---|
+| **Live pitch** | **Sunday 15 November, 10:00 AM.** In person at SLIIT Malabe, or online (Google Meet / Zoom). **5 minutes presentation + 5 minutes Q&A and feedback.** Slots follow the alphabetical order of team names. Judges take notes only; scores are given afterwards from the recording. "No need for complex presentations." |
+| **Judges** | 6 judges (3 in-person, 3 virtual), same rubric for both tracks. Each gives up to **50 marks** (5 criteria × 10); the average of the 6 decides Global Nominees. |
+| **What judges verify on the project page** | 50–200 word summary; demo link (max 7 slides **or** 30-second video with English subtitles) with public access; no voices or pictures of anyone under 18; at least one official NASA resource; AI/SI disclosure (cite AI tools, never generate or alter NASA logos). |
+| **One link** | The *Components of Project* sheet says to include **only ONE demo link** (slides **or** video). Put the deck link in the demo field. If the form also asks for a project link, give one link (the live app if you have it, otherwise the GitHub repository). The deck's last slide already shows both the repository and the live app. |
+| **Local awards** | 10 sub-category awards, each scored 0 to 10 by every judge; highest average wins; one team can win several. See section 7. |
+
+---
+
 ## 1. How the submission works
 
 You fill in the **Project tab** of your team page (profile icon → My Team → Project → Edit → Save Progress often). The form has these fields, in this order:
@@ -46,6 +60,7 @@ Marsline: a layered Marswalk map and route planner
 Tagline for slides: *"Where can the first astronauts walk, and what will they face when they get there?"*
 
 ### High-Level Project Summary
+(Limit: **50 to 200 words**. This one is 145 words.)
 ```
 Marsline is an interactive map and route planner that a Mars astronaut could use to plan a surface walk. It layers NASA and partner data for a chosen area (optical, thermal, topographic, geologic, atmospheric and radiation context) into one view, marks where it is safe to walk, and plans a terrain-aware route to science targets. Jezero Crater is covered in detail (75 m terrain, CTX imagery, THEMIS thermal, USGS geologic map, real Perseverance MEDA weather and rover photos), and three more areas (Nili Fossae, Syrtis Major and Isidis Planitia) are built from MOLA elevation. Slope, roughness and geology become no-go, caution and nominal terrain; an A* planner returns distance, walking time, climb and a warning when a walk exceeds the spacewalk limit. It matters because tools like Mars Trek show global and regional views, while a crew needs hyper-local, safety-first guidance for a single excursion.
 ```
@@ -89,31 +104,36 @@ WHAT WE HOPE TO ACHIEVE
 ```
 
 ### NASA Data
+The form asks for **links to all resources used**. Paste this block:
 ```
-- MRO CTX (Context Camera) mosaic of Jezero/Nili Fossae (Caltech mosaic, 2018): optical base layer and target previews.
-- Mars Odyssey THEMIS day and night infrared controlled mosaics (USGS, 2018): thermal layers.
-- MGS MOLA (MEGDR 128 pixel/degree topography): elevation for the regional areas, slope, and cross-check of the HRSC elevation.
-- Mars 2020 Perseverance MEDA derived data from the NASA PDS Atmospheres Node (PS pressure, RHS humidity and temperature, TIRS thermal infrared, WS wind; sols 51, 247, 410, 552) and the MEDA product indexes.
-- Mars 2020 raw images (NASA/JPL-Caltech, Mastcam-Z and Navcam), 8 images.
-- USGS Astrogeology Science Center, Scientific Investigations Map 3464: geologic map of the Jezero crater and Nili Fossae region (GIS database).
-- Published Curiosity RAD and MSL cruise radiation measurements (Hassler et al., 2014, Science 343; Zeitlin et al., 2013, Science 340), used as cited context only.
-- NASA Mars Trek and the challenge resources page were used for orientation.
+Challenge page and resources: https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/?tab=resources
+- NASA Mars Trek (orientation): https://trek.nasa.gov/mars/
+- MRO CTX (Context Camera) mosaic and Mars Odyssey THEMIS day/night infrared mosaics, distributed in the USGS SIM 3464 database: https://pubs.usgs.gov/sim/3464/ (database: https://pubs.usgs.gov/sim/3464/sim3464_database.zip)
+- Mars Orbital Data Explorer (CTX and other orbital products): https://ode.rsl.wustl.edu/mars/
+- MGS MOLA topography (MEGDR 128 pixel/degree) and THEMIS mosaics: https://www.mars.asu.edu/data/
+- Mars 2020 Perseverance MEDA derived data (pressure, humidity/temperature, thermal infrared, wind), NASA PDS Atmospheres Node: https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/meda.html (files: https://pds-atmospheres.nmsu.edu/PDS/data/PDS4/Mars2020/mars2020_meda/data_derived_env/)
+- Mars 2020 Perseverance raw images (NASA/JPL-Caltech, 8 images used; credits in the repository): https://mars.nasa.gov/mars2020/multimedia/raw-images/
+- Mars 2020 PDS archive: https://pds-geosciences.wustl.edu/missions/mars2020/
+- Curiosity RAD / MSL radiation measurements, used as cited context only: Hassler et al. 2014, Science 343, https://doi.org/10.1126/science.1244797 ; Zeitlin et al. 2013, Science 340, https://doi.org/10.1126/science.1235989
 ```
+(Link check on 14 Nov 2026: the two DOIs were confirmed through Crossref as the right papers; USGS SIM 3464, mars.asu.edu, Mars Trek and the Mars 2020 PDS archive opened. Five links could not be reached from the machine that wrote this pack: the Mars Orbital Data Explorer, UNSCEAR, the ESA Mars Express page, the NASA raw-images page and the challenge resources page. **Click each of them once yourself before you submit.**)
 
 ### Space Agency Partner Data and Other References
 ```
-Space agency partner data
-- ESA (European Space Agency) Mars Express HRSC digital terrain model and hillshade for Jezero/Nili Fossae, distributed in the USGS SIM 3464 database.
+Space Agency Partner data
+- ESA Mars Express HRSC digital terrain model and hillshade for Jezero/Nili Fossae, distributed in the USGS SIM 3464 database: https://pubs.usgs.gov/sim/3464/ (mission: https://www.esa.int/Science_Exploration/Space_Science/Mars_Express)
+
+Other data
+- USGS Astrogeology Science Center, SIM 3464 geologic map of the Jezero crater and Nili Fossae region: https://pubs.usgs.gov/sim/3464/
+- UNSCEAR (average natural background radiation, reference value): https://www.unscear.org/
 
 Software and libraries (open source)
-- Next.js, React, TypeScript, Zod, Firebase JS and Admin SDKs, ESLint.
-- Python: NumPy, SciPy, pandas, GeoPandas, Shapely, pyproj, pyogrio, tifffile, imagecodecs, scikit-image, Pillow, Matplotlib, Jupyter.
-- GitHub Actions for testing.
+- Next.js https://nextjs.org/ · React https://react.dev/ · TypeScript https://www.typescriptlang.org/ · Zod https://zod.dev/ · Firebase https://firebase.google.com/ · ESLint https://eslint.org/
+- Python: NumPy https://numpy.org/ · SciPy https://scipy.org/ · pandas https://pandas.pydata.org/ · GeoPandas https://geopandas.org/ · Shapely https://shapely.readthedocs.io/ · pyproj https://pyproj4.github.io/pyproj/ · scikit-image https://scikit-image.org/ · Pillow https://python-pillow.org/ · Matplotlib https://matplotlib.org/ · Jupyter https://jupyter.org/ · python-pptx https://python-pptx.readthedocs.io/
 
-Other
-- UNSCEAR average natural background dose, used as a published reference value.
-- All code, text and layout were written by the team (see the AI disclosure); no third-party images or music are used other than the NASA images listed above, whose credit lines are saved in public/data/regions/jezero/rover/rover.json.
-- Source code and data: https://github.com/Randula2003/marsline
+Our own work
+- Source code, notebook, data pipeline and tests: https://github.com/Randula2003/marsline
+- All code, text and layout were written by the team with the AI assistance disclosed above. No third-party images other than the NASA images listed; their credit lines are in public/data/regions/jezero/rover/rover.json.
 ```
 
 ---
@@ -173,6 +193,8 @@ Tips: keep text large, record the screen at 1080p, English subtitles if you spea
 
 The form asks whether you used AI and how. The answer is **not shown to judges**, but the guide says you must identify AI use in descriptive text and metadata for **code and data**, and judges can see any AI indicators in the project. The guide also says AI "should not be used to come up with your idea of how to solve the challenge", so describe honestly who decided what.
 
+The form also has a **drop-down: select every tool you used**. For this project that means a large language model / chatbot and a code-generation tool (Claude, through Claude Code). Do **not** select image, video or audio generation: none was used. Do not use or alter NASA logos, flags or mission identifiers anywhere (the deck and app only use the plain words "NASA" and real NASA images with credits).
+
 Suggested answer (edit it so it matches what really happened):
 ```
 Yes. We used Claude (Anthropic) through Claude Code to help write and debug code: the Next.js web app, the Python feature-engineering notebook, automated tests and documentation. [The team decided the idea and approach: a layered, safety-first Marswalk route planner for the Jezero area, and chose the data and the study areas.] [Describe any part where the AI suggested the approach.] We reviewed and ran the code, checked the outputs against the source data, and tested the application. No AI-generated images, audio or video were used. The repository records the AI assistance in the README and in the commit messages.
@@ -191,3 +213,48 @@ The repository README now has an "AI assistance" section and commit messages car
 - [ ] Paste 3 to 5 images into the description (JPG/PNG/GIF, up to 10 MB each): the Jezero mission map, a route screenshot, the MEDA chart, a rover photo.
 - [ ] Both boxes ticked, then **Submit for Judging**. Look for the confirmation banner.
 - [ ] Download your certificate from your profile.
+
+---
+
+## 7. Live pitch on 15 November, 10:00 AM (5 minutes + 5 minutes Q&A)
+
+Use the 7-slide deck. Keep it simple: judges said they want feedback, not a complex show. About 700 words in 5 minutes. Practise once with a timer.
+
+| Slide | Time | What to say |
+|---|---|---|
+| 1 Title | 0:20 | "We are team [name]. Our challenge is the Interplanetary Survival Guide, the Martian Map. Our project is Marsline, a layered map and route planner for one Mars walk." |
+| 2 Problem | 0:40 | "The first astronauts will walk a few kilometres, not across a planet. Global and regional tools show broad layers. On the left, one pixel is 463 metres. On the right, one pixel is 20 metres and you can see the delta. A crew needs the second kind of view, and it needs to know where it is safe to walk." |
+| 3 Layers | 0:40 | "For one place we combine optical imagery, thermal infrared, slope, and a safety map that adds roughness and geology. The crew can hover to read elevation, slope and rock type, and click a target to get a route." |
+| 4 How it works | 0:45 | "Raw NASA, ESA and USGS data goes into a notebook. It computes slope and roughness from elevation, scores the geologic units, and builds a safety grid. We checked our elevation against a second NASA dataset, MOLA, and it agrees with a correlation of 0.995. Then A*, a standard pathfinding algorithm, plans the route. Everything is in the repository, so it runs from a fresh clone." |
+| 5 Safety and route | 0:55 | "In Jezero, 68 percent of the ground is nominal, 30 percent needs caution and 2 percent is no-go. This route to the delta is almost 14 kilometres, about 7 hours, maximum slope 8 degrees. The nearer target is 1.8 kilometres. The crew can tighten the slope limit, change walking speed and set a spacewalk limit, and the route and the warning update instantly." |
+| 6 Conditions | 0:50 | "For Jezero we used real Perseverance weather data for four seasons. A typical day swings from about minus 70 at night to minus 10 degrees by day. This is a real photo from the rover on sol 410. We show radiation as published context only, not as a crew dose." |
+| 7 Data and next | 0:40 | "We used NASA and ESA data throughout. We are honest about limits: the slope limits and walking speed are concept assumptions, and the regional areas are coarse. Next we would add a tablet or helmet display and live space weather. The code and the live app are linked here. Thank you." |
+
+### Likely questions, with honest short answers
+- **Where do the slope limits come from?** "They are concept assumptions (25 degrees no-go, 15 degrees caution at 75 metre resolution), not NASA-certified limits. That is why the crew can change them in the app."
+- **How accurate is the terrain?** "Jezero uses the 75 metre HRSC elevation model; we cross-checked it against MOLA: correlation 0.995, about 31 metres RMS."
+- **What is real and what is simulated?** "Real: terrain, imagery, geology, Perseverance weather and rover photos. Estimated: walking time at 3 km/h. Simulated: the life-support values and the communications log, which are labelled as such."
+- **Why A*?** "It is a standard, fast algorithm that finds the cheapest walkable route over a cost grid, so we can run it in the browser and change the assumptions live."
+- **Why only Jezero in detail?** "It is where the supplied data is richest: imagery, geology and weather. The three regional areas show the method works elsewhere with elevation alone; one line in the notebook adds a new area."
+- **How did you use AI?** Answer exactly as in your SI disclosure. State clearly what the team decided and what the AI helped write.
+- **What would a crew actually use it on?** "A tablet or habitat display for planning, and later a helmet display. Right now it is a planning concept."
+- **Local impact for Sri Lanka?** Only as a clearly stated idea, not a built feature: "The same method (open elevation data, slope, safe-route search) could be tried on Earth terrain, for example to plan routes through landslide-prone hills. We have not built that yet."
+
+---
+
+## 8. Local sub-category awards: where Marsline honestly fits
+
+Each award is scored 0 to 10 by every judge. Do not claim all ten; lean on the ones the evidence supports.
+
+| Award | Fit | Evidence to mention |
+|---|---|---|
+| Best Use of Data | **Strong** | Six NASA/ESA/USGS datasets turned into one working tool; real MEDA and rover data |
+| Best Use of Science | **Strong** | Slope, roughness, geology, atmospheric depth; MOLA cross-check; assumptions stated |
+| Best Use of Technology | **Strong** | Data pipeline, A* planner in the browser, custom map, tests and CI, demo mode |
+| Best Mission Concept | **Good** | Base, targets, routes, spacewalk limit, conditions: a plausible excursion plan |
+| Best Storytelling | Possible | A clear problem-to-route story in the deck and pitch |
+| Most Inspirational | Possible | Real rover photos and a walkable Mars |
+| Galactic Impact | Moderate | Safer excursion planning for future crews |
+| Art & Technology | Moderate | Designed dark interface, one-page maps, deck |
+| Local Impact (Sri Lanka) | Weak | Only as a future idea; say so |
+| Global Connection | Weak | Open data and open code, shared on GitHub |
