@@ -44,12 +44,11 @@ export async function ensureWorkspace(uid: string) {
       });
     }
   }
-  // Demo waypoints and the life-support snapshot are seeded only when the mission
-  // is first created, so deleting them later does not bring them back.
-  const firstRun = !missionSnap.exists;
   const resourcesRef = mRef.collection("lifeSupport");
-  if (firstRun) {
-    batch.set(resourcesRef.doc("demo-initial"), {
+  const resourcesSnap = await resourcesRef.limit(1).get();
+  if (resourcesSnap.empty) {
+    const id = resourcesRef.doc().id;
+    batch.set(resourcesRef.doc(id), {
       oxygenReservePct: 78, waterRemainingLiters: 6.4, waterCapacityLiters: 10,
       waterUseLitersDay: 2.5, co2ScrubberPct: 92, powerReservePct: 86,
       isSimulated: true, notes: "Seed demonstration values only; not real crew telemetry.",
@@ -57,15 +56,13 @@ export async function ensureWorkspace(uid: string) {
     });
   }
   const waypointsRef = mRef.collection("waypoints");
-  if (firstRun) {
+  const waypointSnap = await waypointsRef.limit(1).get();
+  if (waypointSnap.empty) {
     const seedWaypoints = [
       { name: "Jezero habitat reference", type: "HABITAT", latitudeDeg: 18.4447, longitudeDeg: 77.4508, notes: "Concept reference point near Perseverance landing region.", sequence: 1, isDemo: true },
       { name: "Delta science target", type: "SCIENCE_TARGET", latitudeDeg: 18.4300, longitudeDeg: 77.4800, notes: "Illustrative target only; inspect actual orbital image footprints before scientific use.", sequence: 2, isDemo: true }
     ];
-    for (const [index, wp] of seedWaypoints.entries()) {
-      const id = index === 0 ? "demo-habitat" : "demo-delta";
-      batch.set(waypointsRef.doc(id), { ...wp, coordinateSystem: "IAU2000:49900", createdAt: new Date().toISOString() });
-    }
+    for (const wp of seedWaypoints) batch.set(waypointsRef.doc(), { ...wp, coordinateSystem: "IAU2000:49900", createdAt: new Date().toISOString() });
   }
   await batch.commit();
   return { userRef, missionRef: mRef };

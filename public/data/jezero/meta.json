@@ -1,0 +1,263 @@
+{
+ "version": 1,
+ "region": "Jezero Crater & delta (Nili Fossae, Mars)",
+ "crs": "Mars 2000 sphere, lon/lat east-positive",
+ "bounds": {
+  "west": 76.7959713539945,
+  "east": 77.8018248338937,
+  "south": 17.699211495155513,
+  "north": 18.70129858995214
+ },
+ "grid": {
+  "width": 756,
+  "height": 792,
+  "dlon": 0.0013319309911620802,
+  "dlat": 0.0012652953643586414,
+  "stepM": 75,
+  "mPerDeg": 59274.69752330622
+ },
+ "thresholds": {
+  "slopeBlockDeg": 25.0,
+  "slopeCautionDeg": 15.0,
+  "roughCautionM": 3.0
+ },
+ "encoding": {
+  "grid_data.png": "R=slope*4 (deg), G=route cost*40, B=class 0 no-go/1 caution/2 nominal/255 outside",
+  "grid_elev.png": "(R*256+G)/8 - 4096 = elevation metres"
+ },
+ "start": {
+  "id": "BASE",
+  "name": "Landing ellipse centre (start)",
+  "lat": 18.4663,
+  "lon": 77.42984
+ },
+ "targets": [
+  {
+   "id": "T1",
+   "name": "Jezero fan 1",
+   "unit": "Jezero fan 1 unit",
+   "lat": 18.62347,
+   "lon": 77.56869,
+   "science": 1.0,
+   "slopeDeg": 0.2,
+   "elevationM": -2475,
+   "terrainClass": 2,
+   "reason": "Delta deposit: water-lain sediments, prime astrobiology target"
+  },
+  {
+   "id": "T2",
+   "name": "Jezero fan 2",
+   "unit": "Jezero fan 2 unit",
+   "lat": 18.48302,
+   "lon": 77.41788,
+   "science": 0.95,
+   "slopeDeg": 2.6,
+   "elevationM": -2456,
+   "terrainClass": 2,
+   "reason": "Younger delta deposit: stratigraphy of the Jezero lake system"
+  },
+  {
+   "id": "T4",
+   "name": "Upper etched",
+   "unit": "Upper etched unit",
+   "lat": 18.62972,
+   "lon": 77.31633,
+   "science": 0.8,
+   "slopeDeg": 1.0,
+   "elevationM": -2090,
+   "terrainClass": 1,
+   "reason": "Layered, eroded bedrock: mineral-rich layers"
+  },
+  {
+   "id": "T5",
+   "name": "Lower etched",
+   "unit": "Lower etched unit",
+   "lat": 18.24501,
+   "lon": 77.74174,
+   "science": 0.8,
+   "slopeDeg": 1.6,
+   "elevationM": -2723,
+   "terrainClass": 2,
+   "reason": "Layered, eroded bedrock: older record"
+  },
+  {
+   "id": "T3",
+   "name": "Nili Planum fan",
+   "unit": "Nili Planum fan unit",
+   "lat": 18.60746,
+   "lon": 76.93586,
+   "science": 0.7,
+   "slopeDeg": 4.7,
+   "elevationM": -1890,
+   "terrainClass": 1,
+   "reason": "Fan deposit outside the crater"
+  },
+  {
+   "id": "T7",
+   "name": "Crater rim",
+   "unit": "Crater rim unit",
+   "lat": 18.41964,
+   "lon": 77.27788,
+   "science": 0.7,
+   "slopeDeg": 11.4,
+   "elevationM": -1752,
+   "terrainClass": 1,
+   "reason": "Uplifted ancient crust (megabreccia): steep, blocky"
+  },
+  {
+   "id": "T6",
+   "name": "Jezero floor",
+   "unit": "Jezero floor unit",
+   "lat": 18.46909,
+   "lon": 77.59398,
+   "science": 0.65,
+   "slopeDeg": 0.7,
+   "elevationM": -2606,
+   "terrainClass": 2,
+   "reason": "Crater floor: flat, easy access, igneous/sedimentary mix"
+  }
+ ],
+ "traversabilityShare": {
+  "nogo": 0.02323617456008247,
+  "caution": 0.29978358794069404,
+  "nominal": 0.6769802374992235
+ },
+ "molaCheck": {
+  "meanDiffM": 3.3,
+  "rmsM": 30.8,
+  "corr": 0.995
+ },
+ "elevationRangeM": [
+  -3097,
+  -1413
+ ],
+ "assumptions": "Slope limits and geologic-unit costs/science scores are concept-level assumptions, not NASA-certified values.",
+ "layers": [
+  {
+   "id": "ctx",
+   "title": "CTX optical mosaic",
+   "file": "ctx.jpg",
+   "dataType": "OPTICAL",
+   "source": "MRO CTX \u00b7 Caltech mosaic (Feb 2018)",
+   "resolution": "5 m (shown at 20 m)",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.8018456385201
+   ]
+  },
+  {
+   "id": "hillshade",
+   "title": "HRSC hillshade",
+   "file": "hillshade.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "Mars Express HRSC \u00b7 USGS SIM 3464",
+   "resolution": "75 m",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  },
+  {
+   "id": "elevation",
+   "title": "Elevation",
+   "file": "elevation.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "Mars Express HRSC DTM (checked vs MGS MOLA)",
+   "resolution": "75 m",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  },
+  {
+   "id": "slope",
+   "title": "Slope",
+   "file": "slope.png",
+   "dataType": "DERIVED",
+   "source": "Derived from HRSC DTM (Horn)",
+   "resolution": "75 m",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  },
+  {
+   "id": "themis_day",
+   "title": "THEMIS day infrared",
+   "file": "themis_day.png",
+   "dataType": "THERMAL",
+   "source": "Mars Odyssey THEMIS controlled mosaic (Oct 2018)",
+   "resolution": "100 m",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  },
+  {
+   "id": "themis_night",
+   "title": "THEMIS night infrared",
+   "file": "themis_night.png",
+   "dataType": "THERMAL",
+   "source": "Mars Odyssey THEMIS controlled mosaic (Oct 2018)",
+   "resolution": "100 m",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  },
+  {
+   "id": "geology",
+   "title": "Geologic units",
+   "file": "geology_units.geojson",
+   "dataType": "GEOLOGIC",
+   "source": "USGS SIM 3464 (Jezero & Nili Fossae)",
+   "resolution": "map scale 1:75,000"
+  },
+  {
+   "id": "science",
+   "title": "Science value",
+   "file": "science.png",
+   "dataType": "DERIVED",
+   "source": "Derived from USGS units (assumption-based score)",
+   "resolution": "75 m",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  },
+  {
+   "id": "traversability",
+   "title": "Traversability",
+   "file": "traversability.png",
+   "dataType": "DERIVED",
+   "source": "Slope + roughness + geology + scarps",
+   "resolution": "75 m",
+   "bounds": [
+    17.699184661380094,
+    76.7959713539945,
+    18.70129858995214,
+    77.80291118331303
+   ]
+  }
+ ],
+ "gridBounds": [
+  17.699184661380094,
+  76.7959713539945,
+  18.70129858995214,
+  77.80291118331303
+ ]
+}
