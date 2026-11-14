@@ -175,7 +175,8 @@ text(s, 7.2, 2.4, 5.2, 3.0, [dict(text=t, size=16, space_after=7) for t in [
     "Safer, faster excursion planning for a crew", "Four areas today; one line adds more", "Next: tablet and helmet display, live space weather",
     "Honest limits: concept slope limits and walking speed, coarse regional cells, four sample weather days"]])
 card(s, 0.7, 5.65, 11.93, 1.35, fill="23140C")
-text(s, 1.0, 5.65, 11.3, 1.35, [dict(runs=[dict(text="Code  ", bold=True, color=RUST), dict(text=REPO)], size=20, space_after=6),
-                                dict(runs=[dict(text="Live app  ", bold=True, color=RUST), dict(text=LIVE_URL)], size=20)], anchor=MSO_ANCHOR.MIDDLE)
+text(s, 1.0, 5.65, 7.4, 1.35, [dict(runs=[dict(text="Code  ", bold=True, color=RUST), dict(text=REPO)], size=20, space_after=6),
+                               dict(runs=[dict(text="Live app  ", bold=True, color=RUST), dict(text=LIVE_URL)], size=20)], anchor=MSO_ANCHOR.MIDDLE)
+text(s, 8.6, 5.65, 3.75, 1.35, [dict(text="Thank you!", size=40, bold=True, color=SAND, align=PP_ALIGN.RIGHT)], anchor=MSO_ANCHOR.MIDDLE, name="Thank you")   # on slide 7: an 8th slide would break the 7-slide limit
 
 out = HERE / "Marsline_SpaceApps_Demo.pptx"; prs.save(out); print("saved", out, len(prs.slides), "slides")
