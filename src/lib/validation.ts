@@ -21,3 +21,11 @@ export const lifeSupportSchema = z.object({
   powerReservePct: z.number().min(0).max(100),
   notes: z.string().max(1000).optional()
 });
+
+export const messageSchema = z.object({
+  senderCallsign: z.string().trim().min(2).max(60).default("ASTRONAUT-01"),
+  subject: z.string().trim().min(3).max(120),
+  messageBody: z.string().trim().min(3).max(4000),
+  priority: z.enum(["ROUTINE", "PRIORITY", "URGENT"]).default("ROUTINE"),
+  marsSol: z.number().int().min(0).max(100000).default(18),
+});

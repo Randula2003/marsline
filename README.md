@@ -23,6 +23,7 @@ users/{uid}
   missions/ARES-FS-01
     waypoints/{waypointId}
     logs/{logId}
+    messages/{messageId}
     lifeSupport/{snapshotId}
     nasaDatasets/{productCode}
     scienceTargets/{targetId}
@@ -125,6 +126,9 @@ All routes except static UI resources require `Authorization: Bearer <Firebase I
 - `GET /api/life-support` / `POST /api/life-support` — get/save clearly simulated resource snapshots.
 - `GET /api/nasa/catalog` — load the user's Firestore dataset catalogue.
 - `GET /api/nasa/meda/:sensor` — fetch an allowlisted MEDA PDS CSV product index (`ATS`, `WIND`, `PS`, `RDS`, `RHS`, `TIRS`) and save retrieval metadata in Firestore.
+- `GET /api/messages` / `POST /api/messages` — list or save simulated astronaut-to-station messages in the authenticated user's workspace.
+
+Mission communications are a Firestore simulator only. Messages are not transmitted over a spacecraft radio link and are not delivered to a separate station account.
 
 ## NASA data scope
 
@@ -144,7 +148,7 @@ NASA Mars Trek is embedded as an external interactive viewer. Waypoint coordinat
 - Firebase Admin credentials are server-only and never bundled into the browser.
 - Anonymous Firebase Authentication creates a stable UID for that browser installation. If a user clears browser storage or uses another device, anonymous accounts are not automatically linked; enable and implement an account-linking provider before relying on cross-device identity.
 - Firestore Rules deny all direct client reads and writes. API routes verify Firebase ID tokens and scope all application data by UID.
-- Add App Check, request throttling, monitoring and account linking before public production deployment.
+- The MEDA index proxy is limited to 12 requests per Firebase UID per minute and 2 MiB per upstream response. Add Firebase App Check, broader API throttling, monitoring and account linking before public production deployment.
 - NASA endpoints can change availability or impose rate limits. Check the official source metadata and terms before a public challenge submission.
 
 ## Project structure
@@ -164,6 +168,12 @@ apphosting.yaml            Firebase App Hosting runtime config
 ```
 
 This is a research prototype and is not flight-certified mission software. Resource models, mission-status values and distance estimates are not real crew safety advice.
+
+## Demo mode (no Firebase needed)
+
+If the Firebase web settings are missing or still contain the `YOUR_...` placeholders, Marsline starts in **demo mode** automatically: waypoints, mission log, communications simulator, life-support snapshots and saved routes all work and are stored in your browser (localStorage). The NASA PDS index fetches still call NASA through the server. The sidebar shows **DEMO MODE**, and **Data & Firebase** has buttons to switch to demo mode or reset the demo data.
+
+To use Cloud Firestore instead, fill in `.env.local` (see Firebase setup above). To force demo mode even when Firebase is configured, set `NEXT_PUBLIC_DEMO_MODE=true`.
 
 ## Study-area data pipeline (feature engineering)
 
