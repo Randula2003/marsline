@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import NextImage from "next/image";
+import EvaWindow from "@/components/eva-window";
+import ValidationPanel from "@/components/validation-panel";
 import { WALK_SPEED_KMH, cellOf, loadRegions, loadTerrain, loadVectors, planRoute, probe, type Probe, type RegionInfo, type Route, type Terrain, type Vectors } from "@/lib/terrain";
 
 type Waypoint = { id: string; name: string; type: string; latitudeDeg: number | string; longitudeDeg: number | string };
@@ -50,6 +52,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
   const drawRef = useRef<() => void>(() => {});
   const frame = useRef(0);
   const fitted = useRef(false);
+  const touched = useRef(false);                 // true once the user has panned or zoomed: then resizes no longer refit the view
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef({ moved: 0, pinch: 0 });
   const lastCell = useRef("");
@@ -192,6 +195,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
     if (!terrain) return;
     const { w: cw, h: ch } = size.current; if (!cw || !ch) return;
     const z = Math.min(cw / terrain.w, ch / terrain.h) * 0.98;
+    touched.current = false;
     view.current = { z, x: terrain.w / 2 - cw / 2 / z, y: terrain.h / 2 - ch / 2 / z };
     schedule();
   }, [terrain, schedule]);
@@ -200,12 +204,13 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
     const resize = () => {
       const r = wrap.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
       size.current = { w: r.width, h: r.height, dpr }; cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
-      if (terrain && !fitted.current && r.width > 0) { fitted.current = true; fit(); } else schedule();
+      if (terrain && r.width > 0 && (!fitted.current || !touched.current)) { fitted.current = true; fit(); } else schedule();
     };
     const ro = new ResizeObserver(resize); ro.observe(wrap); resize();
     return () => ro.disconnect();
   }, [terrain, fit, schedule]);
   const zoomAt = useCallback((sx: number, sy: number, factor: number) => {
+    touched.current = true;
     const v = view.current, nz = Math.min(14, Math.max(0.35, v.z * factor));
     const gx = v.x + sx / v.z, gy = v.y + sy / v.z;
     view.current = { z: nz, x: gx - sx / nz, y: gy - sy / nz }; schedule();
@@ -242,6 +247,7 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
       gesture.current.pinch = d; gesture.current.moved = 99; return;
     }
     const dx = p.x - prev.x, dy = p.y - prev.y; gesture.current.moved += Math.abs(dx) + Math.abs(dy);
+    touched.current = true;
     view.current = { ...view.current, x: view.current.x - dx / view.current.z, y: view.current.y - dy / view.current.z }; schedule();
   };
   const onUp = (e: ReactPointerEvent) => {
@@ -350,10 +356,12 @@ export default function MarsMap({ waypoints, onSaveRoute }: Props) {
             <p className={`jz-verdict ${route.straightBlocked ? "warn" : ""}`}>{route.straightBlocked ? `The straight line crosses no-go terrain. This route detours ${route.detourPct.toFixed(0)}% to stay on walkable ground.` : `The straight line is walkable; the planned route is ${route.detourPct.toFixed(0)}% longer to favour easier terrain.`}</p>
             {profilePath && <svg className="jz-profile" viewBox="0 0 300 84" role="img" aria-label="Elevation profile along the route"><path d={profilePath.area} fill="rgba(56,189,248,.18)" /><path d={profilePath.line} fill="none" stroke="#38bdf8" strokeWidth="1.6" /><text x="4" y="10" fill="#929eaa" fontSize="7">{Math.round(profilePath.zmax)} m</text><text x="4" y="82" fill="#929eaa" fontSize="7">{Math.round(profilePath.zmin)} m</text></svg>}
             <p className="fineprint">*Concept estimate: {speedKmh} km/h on easy ground, scaled by slope, roughness and geology cost. Slope limits: caution ≥ {terrain?.meta.thresholds.slopeCautionDeg}°, no-go ≥ {blockSlope}°. Not validated for crew operations.</p>
+            {terrain && <EvaWindow latDeg={(terrain.meta.gridBounds[0] + terrain.meta.gridBounds[2]) / 2} routeHours={route.timeMin / 60} weatherUrl={terrain.meta.id === "jezero" ? `${terrain.base}/meda_timeseries.json` : undefined} />}
             {onSaveRoute && start && end && <button className="button primary full" disabled={saving} onClick={async () => { setSaving(true); try { await onSaveRoute({ start, end, route }); } finally { setSaving(false); } }}>{saving ? "SAVING…" : "SAVE ROUTE TO MISSION"}</button>}
           </>}
         </article>
 
+        {terrain?.meta.validation && <ValidationPanel base={terrain.base} file={terrain.meta.validation} image={terrain.meta.validationImage} />}
         {terrain && <article className="panel">
           <div className="panel-top"><span>DATA QUALITY</span><span className="tag">VALIDATION</span></div>
           <div className="data-line"><span>No-go / caution / nominal</span><b>{(terrain.meta.traversabilityShare.nogo * 100).toFixed(0)} / {(terrain.meta.traversabilityShare.caution * 100).toFixed(0)} / {(terrain.meta.traversabilityShare.nominal * 100).toFixed(0)} %</b></div>

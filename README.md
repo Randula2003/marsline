@@ -10,7 +10,7 @@ It is a Next.js + Firebase application. If Firebase is not configured it falls b
 
 | Page | What it shows |
 |---|---|
-| **Surface map** | Four study areas (Jezero in detail; Nili Fossae, Syrtis Major and Isidis Planitia regional). Switchable layers (imagery, thermal, elevation, slope, traversability, science value, atmospheric depth, geology), terrain readout on hover, an A* route planner (distance, walking time, climb, elevation profile, spacewalk-limit warning), adjustable assumptions, one-page map download |
+| **Surface map** | Four study areas (Jezero in detail; Nili Fossae, Syrtis Major and Isidis Planitia regional). Switchable layers (imagery, thermal, elevation, slope, traversability, science value, atmospheric depth, geology), terrain readout on hover, an A* route planner (distance, walking time, climb, elevation profile, spacewalk-limit warning), adjustable assumptions, a **spacewalk window** (when a walk fits in daylight and above a temperature limit), a **reality check against every real Perseverance drive**, one-page map download |
 | **Current conditions** | Real Perseverance MEDA measurements for four seasons (temperature, pressure, humidity, wind), real rover photos from the same sols, and live retrieval of NASA PDS index files |
 | **Science data layers**, **Route planner**, **Radiation context** | Layer catalogue, saved waypoints and route distances, published radiation measurements as context only (no crew dose) |
 | **Life support**, **Mission communications**, **Mission log**, **Wrist interface** | Simulated resource snapshots, a simulated station message log, mission notes, a wearable-style status view |
@@ -153,27 +153,33 @@ Helper scripts (all outputs are committed, so you only run these to refresh them
 
 - `python scripts/download_meda.py`: downloads about 47 MB of Perseverance MEDA files (one sol per season) into `data/raw/meda/`; the notebook (step 11b) reduces them to `meda_timeseries.json` (about 10 KB).
 - `python scripts/fetch_rover_images.py`: saves 8 NASA/JPL-Caltech surface photos (about 0.4 MB).
+- `python scripts/fetch_rover_traverse.py`: downloads NASA's public Perseverance traverse (every real drive, about 2.3 MB) into `data/raw/m20/`; notebook step 13c reduces it to `validation.json` and `validation.png`.
 - `python notebooks/strip_outputs.py`: removes chart images from the notebook to keep it small in git.
 
 **Add another area:** append one line to `REGIONS` in notebook section 14 (id, name, centre latitude/longitude, half-size in degrees, a short description) and run all cells. The area must lie inside the MOLA tile supplied (longitude 0 to 90 °E, latitude 0 to 44 °N). Areas outside it (for example Gale Crater) need the matching MOLA tile from https://www.mars.asu.edu/data/. New areas appear in the app through `public/data/regions/index.json`. The colour and THEMIS PNG mosaics in the zip carry no map coordinates, so they are not used.
 
 **Assumptions** (edit in the notebook, or adjust live in the route panel): slope limits (Jezero 15° caution / 25° no-go; regional 8° / 15° because 463 m cells smooth steep ground), geologic-unit cost multipliers, science scores, and a 3 km/h walking speed. They are concept-level, not NASA-certified.
 
+## What is new here: reality check and spacewalk window
+
+- **Reality check (Jezero).** We compare our safety map and route planner with NASA's record of every real Perseverance drive (46 km, sol 14 to 2022). Result: 0% of the rover's path lies on ground we call no-go, its steepest slope was 19.7° against our 25° limit, and our planner's routes are a median 0.91× the real drive length (80% within ±25%). The check also found a flaw in our first map: ridge, rim and delta-front lines had been treated as impassable, yet 12% of the real path crossed them, so they are now high-cost caution ground. Limits: the rover has different mobility limits than an astronaut, and its drives were chosen by JPL planners, so this shows consistency with real drive planning, not proof of crew safety.
+- **Spacewalk window.** For a planned route the app finds the start times at which the whole walk (optionally with the walk back) is in daylight and never colder than a limit the crew chooses. The sun's position is computed from latitude and season (Mars obliquity 25.19°), with the equation of time measured from the MEDA files for the Jezero sols; the temperature is the measured local air temperature of one sample sol per season (Jezero only; other areas get a daylight-only window). The temperature limit is an adjustable assumption, not a real suit specification. The maths is in `src/lib/eva.ts` and is tested.
+
 ## Tests and CI
 
-`npm test` runs the route-planner tests (a synthetic grid) and checks every generated study-area folder (files present, image sizes match, targets inside bounds, MEDA values plausible, credits present). GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, tests and the production build on every pull request.
+`npm test` runs the route-planner tests (a synthetic grid), the sun-geometry and spacewalk-window tests, and checks every generated study-area folder (files present, image sizes match, targets inside bounds, MEDA values plausible, credits present). GitHub Actions (`.github/workflows/ci.yml`) runs lint, typecheck, tests and the production build on every pull request.
 
 ## Project structure
 
 ```text
 src/app/                   Next.js App Router: page, layout, API routes
 src/components/            mission-console (all pages), mars-map (canvas map + route planner),
-                           meda-charts, rover-gallery, firebase-setup
-src/lib/                   terrain.ts (layers + A* planner), demo-store.ts (browser demo backend),
+                           meda-charts, rover-gallery, firebase-setup, eva-window, validation-panel
+src/lib/                   terrain.ts (layers + A* planner), eva.ts (sun and window maths), demo-store.ts (browser demo backend),
                            firebase-*.ts, server-auth.ts, firestore-workspace.ts, nasa.ts, validation.ts, constants.ts
 public/data/regions/       generated study-area data (committed) + index.json
 notebooks/                 01_feature_engineering.ipynb, strip_outputs.py
-scripts/                   download_meda.py, fetch_rover_images.py, check-firebase.mjs
+scripts/                   download_meda.py, fetch_rover_images.py, fetch_rover_traverse.py, check-firebase.mjs
 tests/                     route-planner and data tests
 docs/demo/                 7-slide Space Apps demo deck (PowerPoint + PDF) and its build scripts
 .github/workflows/         CI

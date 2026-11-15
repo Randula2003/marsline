@@ -70,11 +70,11 @@
    "id": "T2",
    "name": "Jezero fan 2",
    "unit": "Jezero fan 2 unit",
-   "lat": 18.48302,
-   "lon": 77.41788,
+   "lat": 18.50831,
+   "lon": 77.39786,
    "science": 0.95,
-   "slopeDeg": 2.6,
-   "elevationM": -2456,
+   "slopeDeg": 3.8,
+   "elevationM": -2393,
    "terrainClass": 2,
    "reason": "Younger delta deposit: stratigraphy of the Jezero lake system",
    "thumb": "thumbs/T2.jpg"
@@ -122,11 +122,11 @@
    "id": "T7",
    "name": "Crater rim",
    "unit": "Crater rim unit",
-   "lat": 18.41964,
-   "lon": 77.27788,
+   "lat": 18.02626,
+   "lon": 77.52056,
    "science": 0.7,
-   "slopeDeg": 11.4,
-   "elevationM": -1752,
+   "slopeDeg": 6.0,
+   "elevationM": -1630,
    "terrainClass": 1,
    "reason": "Uplifted ancient crust (megabreccia): steep, blocky",
    "thumb": "thumbs/T7.jpg"
@@ -146,8 +146,8 @@
   }
  ],
  "traversabilityShare": {
-  "nogo": 0.02323617456008247,
-  "caution": 0.29978358794069404,
+  "nogo": 0.006203588511524908,
+  "caution": 0.3168161739892516,
   "nominal": 0.6769802374992235
  },
  "molaCheck": {
@@ -288,7 +288,7 @@
    "title": "Traversability",
    "file": "traversability.png",
    "dataType": "DERIVED",
-   "source": "Slope + roughness + geology + scarps",
+   "source": "Slope + roughness + geology + ridge/rim lines",
    "resolution": "75 m",
    "bounds": [
     17.699184661380094,
@@ -303,5 +303,7 @@
   76.7959713539945,
   18.70129858995214,
   77.80291118331303
- ]
+ ],
+ "validation": "validation.json",
+ "validationImage": "validation.png"
 }
