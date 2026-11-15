@@ -24,6 +24,7 @@ export type Meta = {
   targets: Target[];
   traversabilityShare: { nogo: number; caution: number; nominal: number };
   molaCheck: { meanDiffM: number; rmsM: number; corr: number } | null;
+  validation?: string; validationImage?: string;
   elevationRangeM: [number, number];
   assumptions: string;
   layers: LayerMeta[];
