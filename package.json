@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -33,7 +33,7 @@
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": "22.x"
   },
   "description": "Integrated Mars surface mission planning, NASA science data catalogue, and Firebase-backed workspace."
 }
