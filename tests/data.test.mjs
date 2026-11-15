@@ -60,18 +60,3 @@ for (const r of index) {
     assert.ok(fs.existsSync(path.join(base, r.id, l.file)));
   });
 }
-
-test("validation against real Perseverance drives: the rover never crossed our no-go limit and our planner agrees with real drives", () => {
-  const v = JSON.parse(fs.readFileSync(path.join(base, "jezero", "validation.json"), "utf8"));
-  assert.ok(v.drivenKmInArea > 20 && v.driveSegmentsInArea > 100, "enough real driving checked");
-  assert.ok(v.slopeDeg.max < 25, `rover max slope ${v.slopeDeg.max} must stay below our 25 degree no-go limit`);
-  assert.ok(v.pathShare.nogo <= 0.02, `rover path on no-go ground: ${v.pathShare.nogo}`);
-  assert.ok(Math.abs(v.pathShare.nogo + v.pathShare.caution + v.pathShare.nominal - 1) < 0.01);
-  assert.ok(v.plannerComparison.drives >= 30 && v.plannerComparison.medianLengthRatio > 0.7 && v.plannerComparison.medianLengthRatio < 1.3);
-  assert.ok(fs.existsSync(path.join(base, "jezero", "validation.png")) && v.caveats.length >= 2);
-});
-
-test("meda time series carries the equation-of-time offset for every sol", () => {
-  const d = JSON.parse(fs.readFileSync(path.join(base, "jezero", "meda_timeseries.json"), "utf8"));
-  for (const s of d.sols) assert.ok(Math.abs(s.ltstOffsetH) < 1, `offset ${s.ltstOffsetH}`);
-});

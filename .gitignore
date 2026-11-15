@@ -1,31 +1,25 @@
-# dependencies and build output
 node_modules/
 .next/
 out/
 build/
 coverage/
-tsconfig.tsbuildinfo
-
-# secrets and local settings (never commit)
 .env
 .env.*
 !.env.local.example
 .firebase/
 service-account*.json
 *-firebase-adminsdk-*.json
+.DS_Store
+*.log
 
-# generated or downloaded data (regenerate with the notebook and scripts)
+# raw NASA/USGS downloads (hundreds of MB)
 data/raw/
-docs/demo/images/
 
-# local tooling and private notes
+# local tooling
 .claude/
 anaconda_projects/
 AGENTS.md
 .ipynb_checkpoints/
-local-notes/
 
-# OS and editor leftovers
-.DS_Store
-*.log
-~$*
+# build artifacts
+tsconfig.tsbuildinfo

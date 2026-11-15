@@ -38,7 +38,7 @@ const engineered = [
   { source: "HRSC DTM", kind: "DERIVED", title: "Slope and roughness", detail: "Horn slope (degrees) and local roughness from the 75 m HRSC elevation model, cross-checked against MGS MOLA." },
   { source: "USGS SIM 3464", kind: "GEOLOGIC", title: "Geologic units, scarps and craters", detail: "14 mapped units, ridge/rim/delta-front lines and 341 small craters, reprojected from Mars MTM to longitude/latitude." },
   { source: "CTX · THEMIS", kind: "OPTICAL · THERMAL", title: "Imagery and day/night infrared", detail: "Caltech CTX mosaic plus THEMIS day and night thermal infrared, warped onto the same grid as the terrain layers." },
-  { source: "DERIVED", kind: "SAFETY", title: "Traversability classes", detail: "No-go, caution and nominal terrain from slope, roughness, geology cost and ridge/rim lines. Drives the A* route planner." },
+  { source: "DERIVED", kind: "SAFETY", title: "Traversability classes", detail: "No-go, caution and nominal terrain from slope, roughness, geology cost and scarps. Drives the A* route planner." },
   { source: "MGS MOLA", kind: "REGIONAL", title: "More study areas", detail: "Nili Fossae, Syrtis Major and Isidis Planitia built from the global 463 m MOLA tile: hillshade, slope, traversability, relief-derived targets and routes. Add more by editing REGIONS in the notebook." },
   { source: "MEDA INDEX", kind: "IN SITU", title: "Sol, season and local-time coverage", detail: "Which Perseverance sols, seasons (Ls) and hours have wind and ancillary data, ready to guide real data retrieval." }
 ] as const;
@@ -298,7 +298,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
         </>}
         {view === "routes" && <>
           <PageHead eyebrow="EXCURSION PLANNING · MARS COORDINATES" title="Route planner" desc="Create saved waypoints and estimate direct Mars surface distance between consecutive stops." />
-          <div className="data-banner"><div><span className="overline">TERRAIN-AWARE</span><h2>Plan a walkable route on the map</h2><p>A* pathfinding over slope, roughness, geology and ridge/rim lines. The straight-line distances below ignore terrain.</p></div><button className="button primary" onClick={() => navigate("map")}>OPEN SURFACE MAP →</button></div>
+          <div className="data-banner"><div><span className="overline">TERRAIN-AWARE</span><h2>Plan a walkable route on the map</h2><p>A* pathfinding over slope, roughness, geology and ridge scarps. The straight-line distances below ignore terrain.</p></div><button className="button primary" onClick={() => navigate("map")}>OPEN SURFACE MAP →</button></div>
           <div className="route-layout"><article className="panel"><div className="panel-top"><span>ADD WAYPOINT</span><span className="tag">IAU2000:49900</span></div><form className="form-grid" onSubmit={addWaypoint}>
             <label>Waypoint name<input required minLength={2} maxLength={80} value={wpName} onChange={(e) => setWpName(e.target.value)} placeholder="Clay-bearing outcrop" /></label>
             <label>Waypoint type<select value={wpType} onChange={(e) => setWpType(e.target.value)}><option value="SCIENCE_TARGET">Science target</option><option value="HABITAT">Habitat</option><option value="RESOURCE_CACHE">Resource cache</option><option value="OBSERVATION_POINT">Observation point</option><option value="HAZARD">Hazard / avoid</option><option value="ROVER_POSITION">Rover position</option><option value="OTHER">Other</option></select></label>
