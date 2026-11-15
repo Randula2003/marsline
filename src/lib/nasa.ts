@@ -2,10 +2,29 @@ import { MEDA_INDEXES, type MedaSensor } from "@/lib/constants";
 
 const MAX_INDEX_BYTES = 2 * 1024 * 1024;
 
+/** A failure of NASA's server or network path (as opposed to a bug here). Its message is safe to show to the user. */
+export class UpstreamError extends Error {
+  constructor(message: string) { super(message); this.name = "UpstreamError"; }
+}
+
+async function fetchWithRetry(url: string): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const started = Date.now();
+    try { return await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(45000) }); }
+    catch (error) {
+      lastError = error;
+      if (Date.now() - started > 15000) break;                 // a slow server will not recover on a second try; only retry quick connection failures
+    }
+  }
+  console.error("[nasa] fetch failed", lastError);
+  throw new UpstreamError("NASA PDS is slow or unreachable right now. Check your internet connection and try again in a minute.");
+}
+
 export async function fetchMedaIndex(sensor: MedaSensor) {
   const sourceUrl = MEDA_INDEXES[sensor].url;
-  const response = await fetch(sourceUrl, { cache: "no-store", signal: AbortSignal.timeout(20000) });
-  if (!response.ok) throw new Error(`NASA PDS returned HTTP ${response.status} for ${sensor}.`);
+  const response = await fetchWithRetry(sourceUrl);
+  if (!response.ok) throw new UpstreamError(`NASA PDS returned HTTP ${response.status} for ${sensor}.`);
   const contentLength = Number(response.headers.get("content-length"));
   if (Number.isFinite(contentLength) && contentLength > MAX_INDEX_BYTES) {
     await response.body?.cancel();

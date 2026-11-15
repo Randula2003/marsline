@@ -28,5 +28,13 @@ export function getFirebaseAdminApp(): App {
   throw new Error("Firebase Admin credentials are not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY in .env.local, or use Application Default Credentials.");
 }
 
+/** True only when real (non-placeholder) server credentials are available. Used to allow the browser demo mode. */
+export function isFirebaseAdminConfigured(): boolean {
+  const real = (v?: string) => Boolean(v) && !/^(YOUR_|REPLACE|xxx)/i.test(v as string) && !/YOUR_PROJECT_ID|xxxxx/i.test(v as string);
+  const key = process.env.FIREBASE_PRIVATE_KEY;
+  const explicit = real(process.env.FIREBASE_PROJECT_ID) && real(process.env.FIREBASE_CLIENT_EMAIL) && Boolean(key) && !/YOUR_PRIVATE_KEY/i.test(key as string) && (key as string).replace(/\\n/g, "\n").length > 200;
+  return explicit || Boolean(process.env.K_SERVICE || process.env.FIREBASE_CONFIG || process.env.GOOGLE_APPLICATION_CREDENTIALS);
+}
+
 export function getAdminAuth() { return getAuth(getFirebaseAdminApp()); }
 export function getAdminDb() { return getFirestore(getFirebaseAdminApp()); }

@@ -1,0 +1,54 @@
+[
+ {
+  "id": "jezero",
+  "name": "Jezero Crater & delta",
+  "blurb": "Perseverance landing region: delta, crater floor and rim with 75 m terrain, CTX imagery, THEMIS thermal and a USGS geologic map.",
+  "detail": "detailed",
+  "lat": 18.2,
+  "lon": 77.299,
+  "widthKm": 57,
+  "heightKm": 59,
+  "resolutionM": 75,
+  "targets": 7,
+  "missionMap": "mission_map.png"
+ },
+ {
+  "id": "isidis-planitia",
+  "name": "Isidis Planitia",
+  "blurb": "Smooth floor of a giant impact basin about 1,500 km across: broad flat terrain, a natural candidate for landing studies.",
+  "detail": "regional",
+  "lat": 12.902,
+  "lon": 87.0,
+  "widthKm": 297,
+  "heightKm": 297,
+  "resolutionM": 463,
+  "targets": 3,
+  "missionMap": "mission_map.png"
+ },
+ {
+  "id": "nili-fossae",
+  "name": "Nili Fossae",
+  "blurb": "Arcuate trough system just north-west of Jezero. Orbiters detect clay, olivine and carbonate minerals here.",
+  "detail": "regional",
+  "lat": 21.5,
+  "lon": 74.5,
+  "widthKm": 178,
+  "heightKm": 178,
+  "resolutionM": 463,
+  "targets": 3,
+  "missionMap": "mission_map.png"
+ },
+ {
+  "id": "syrtis-major",
+  "name": "Syrtis Major \u00b7 Nili Patera",
+  "blurb": "Dark volcanic highland with the Nili Patera caldera, a dune field and silica-rich deposits seen from orbit.",
+  "detail": "regional",
+  "lat": 8.801,
+  "lon": 67.301,
+  "widthKm": 178,
+  "heightKm": 178,
+  "resolutionM": 463,
+  "targets": 4,
+  "missionMap": "mission_map.png"
+ }
+]

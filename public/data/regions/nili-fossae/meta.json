@@ -1,0 +1,177 @@
+{
+ "version": 2,
+ "id": "nili-fossae",
+ "name": "Nili Fossae",
+ "region": "Nili Fossae",
+ "detail": "regional",
+ "blurb": "Arcuate trough system just north-west of Jezero. Orbiters detect clay, olivine and carbonate minerals here.",
+ "vectors": [],
+ "defaultLayers": [
+  "hillshade",
+  "elevation",
+  "traversability"
+ ],
+ "elevEncoding": {
+  "offset": 8192,
+  "scale": 4
+ },
+ "missionMap": "mission_map.png",
+ "gridBounds": [
+  20.0,
+  72.8828125,
+  23.0,
+  76.1171875
+ ],
+ "bounds": {
+  "west": 72.8828125,
+  "east": 76.1171875,
+  "south": 20.0,
+  "north": 23.0
+ },
+ "grid": {
+  "width": 414,
+  "height": 384,
+  "dlon": 0.0078125,
+  "dlat": 0.0078125,
+  "stepM": 463,
+  "mPerDeg": 59274.69752330622
+ },
+ "thresholds": {
+  "slopeBlockDeg": 15.0,
+  "slopeCautionDeg": 8.0,
+  "roughCautionM": 24.6
+ },
+ "encoding": {
+  "grid_data.png": "R=slope*4 (deg), G=route cost*40, B=class 0 no-go/1 caution/2 nominal",
+  "grid_elev.png": "(R*256+G)/4 - 8192 = elevation metres"
+ },
+ "start": {
+  "id": "BASE",
+  "name": "Flattest wide plain (base candidate)",
+  "lat": 21.56641,
+  "lon": 74.73828
+ },
+ "targets": [
+  {
+   "name": "Lowest walkable floor",
+   "unit": "relief-derived",
+   "lat": 21.77734,
+   "lon": 74.79297,
+   "science": 0.7,
+   "reason": "Deepest flat ground in the area: basin-floor deposits collect here",
+   "slopeDeg": 2.8,
+   "elevationM": -748,
+   "terrainClass": 2,
+   "id": "T1"
+  },
+  {
+   "name": "Highest walkable ground",
+   "unit": "relief-derived",
+   "lat": 21.55859,
+   "lon": 74.41797,
+   "science": 0.6,
+   "reason": "Rim/summit viewpoint with the widest exposure of older terrain",
+   "slopeDeg": 4.9,
+   "elevationM": 385,
+   "terrainClass": 2,
+   "id": "T2"
+  },
+  {
+   "name": "Steepest walkable slope",
+   "unit": "relief-derived",
+   "lat": 20.21484,
+   "lon": 75.78516,
+   "science": 0.5,
+   "reason": "Escarpment where layering may be exposed (confirm with imagery)",
+   "slopeDeg": 15.0,
+   "elevationM": -226,
+   "terrainClass": 1,
+   "id": "T3"
+  }
+ ],
+ "traversabilityShare": {
+  "nogo": 0.03092919685990338,
+  "caution": 0.1248930656199678,
+  "nominal": 0.8441777375201288
+ },
+ "molaCheck": null,
+ "elevationRangeM": [
+  -2234,
+  1675
+ ],
+ "assumptions": "Regional 463 m MOLA cells: slope limits (8 deg caution, 15 deg no-go), science scores and walking speed are concept-level assumptions. Targets are relief-derived candidates, not mapped geology.",
+ "layers": [
+  {
+   "id": "hillshade",
+   "base": true,
+   "title": "MOLA hillshade",
+   "file": "hillshade.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "MGS MOLA 128 ppd (computed hillshade)",
+   "resolution": "463 m",
+   "bounds": [
+    20.0,
+    72.8828125,
+    23.0,
+    76.1171875
+   ]
+  },
+  {
+   "id": "elevation",
+   "title": "Elevation",
+   "file": "elevation.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "MGS MOLA gridded topography",
+   "resolution": "463 m",
+   "bounds": [
+    20.0,
+    72.8828125,
+    23.0,
+    76.1171875
+   ]
+  },
+  {
+   "id": "slope",
+   "title": "Slope",
+   "file": "slope.png",
+   "dataType": "DERIVED",
+   "source": "Derived from MOLA (Horn)",
+   "resolution": "463 m",
+   "bounds": [
+    20.0,
+    72.8828125,
+    23.0,
+    76.1171875
+   ]
+  },
+  {
+   "id": "atmosphere",
+   "title": "Atmospheric depth (radiation shielding context)",
+   "file": "atmosphere.png",
+   "dataType": "DERIVED",
+   "source": "Derived from MOLA elevation with an assumed 10.8 km scale height",
+   "resolution": "463 m",
+   "note": "Pressure here is 0.86 to 1.23 times the reference level (areoid). Darker = more atmosphere overhead. Context only, not a dose.",
+   "bounds": [
+    20.0,
+    72.8828125,
+    23.0,
+    76.1171875
+   ]
+  },
+  {
+   "id": "traversability",
+   "title": "Traversability",
+   "file": "traversability.png",
+   "dataType": "DERIVED",
+   "source": "Slope + roughness (regional limits)",
+   "resolution": "463 m",
+   "bounds": [
+    20.0,
+    72.8828125,
+    23.0,
+    76.1171875
+   ]
+  }
+ ]
+}

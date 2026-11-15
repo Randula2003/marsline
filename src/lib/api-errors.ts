@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { AuthenticationError, RateLimitError } from "@/lib/server-auth";
+import { UpstreamError } from "@/lib/nasa";
 
 export function apiErrorResponse(error: unknown, fallback: string, fallbackStatus = 500) {
   if (error instanceof AuthenticationError) {
@@ -8,6 +9,9 @@ export function apiErrorResponse(error: unknown, fallback: string, fallbackStatu
   }
   if (error instanceof RateLimitError) {
     return NextResponse.json({ error: error.message }, { status: 429 });
+  }
+  if (error instanceof UpstreamError) {
+    return NextResponse.json({ error: error.message }, { status: 502 });
   }
   if (error instanceof ZodError) {
     return NextResponse.json({ error: "Request validation failed." }, { status: 400 });

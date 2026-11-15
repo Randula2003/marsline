@@ -1,0 +1,177 @@
+{
+ "version": 2,
+ "id": "isidis-planitia",
+ "name": "Isidis Planitia",
+ "region": "Isidis Planitia",
+ "detail": "regional",
+ "blurb": "Smooth floor of a giant impact basin about 1,500 km across: broad flat terrain, a natural candidate for landing studies.",
+ "vectors": [],
+ "defaultLayers": [
+  "hillshade",
+  "elevation",
+  "traversability"
+ ],
+ "elevEncoding": {
+  "offset": 8192,
+  "scale": 4
+ },
+ "missionMap": "mission_map.png",
+ "gridBounds": [
+  10.3984375,
+  84.4296875,
+  15.40625,
+  89.5703125
+ ],
+ "bounds": {
+  "west": 84.4296875,
+  "east": 89.5703125,
+  "south": 10.3984375,
+  "north": 15.40625
+ },
+ "grid": {
+  "width": 658,
+  "height": 641,
+  "dlon": 0.0078125,
+  "dlat": 0.0078125,
+  "stepM": 463,
+  "mPerDeg": 59274.69752330622
+ },
+ "thresholds": {
+  "slopeBlockDeg": 15.0,
+  "slopeCautionDeg": 8.0,
+  "roughCautionM": 10.0
+ },
+ "encoding": {
+  "grid_data.png": "R=slope*4 (deg), G=route cost*40, B=class 0 no-go/1 caution/2 nominal",
+  "grid_elev.png": "(R*256+G)/4 - 8192 = elevation metres"
+ },
+ "start": {
+  "id": "BASE",
+  "name": "Flattest wide plain (base candidate)",
+  "lat": 12.90234,
+  "lon": 87.24609
+ },
+ "targets": [
+  {
+   "name": "Lowest walkable floor",
+   "unit": "relief-derived",
+   "lat": 13.16797,
+   "lon": 87.33203,
+   "science": 0.7,
+   "reason": "Deepest flat ground in the area: basin-floor deposits collect here",
+   "slopeDeg": 0.3,
+   "elevationM": -3839,
+   "terrainClass": 2,
+   "id": "T1"
+  },
+  {
+   "name": "Highest walkable ground",
+   "unit": "relief-derived",
+   "lat": 12.74609,
+   "lon": 87.28516,
+   "science": 0.6,
+   "reason": "Rim/summit viewpoint with the widest exposure of older terrain",
+   "slopeDeg": 1.3,
+   "elevationM": -3714,
+   "terrainClass": 2,
+   "id": "T2"
+  },
+  {
+   "name": "Steepest walkable slope",
+   "unit": "relief-derived",
+   "lat": 12.30859,
+   "lon": 89.11328,
+   "science": 0.5,
+   "reason": "Escarpment where layering may be exposed (confirm with imagery)",
+   "slopeDeg": 15.0,
+   "elevationM": -4086,
+   "terrainClass": 1,
+   "id": "T3"
+  }
+ ],
+ "traversabilityShare": {
+  "nogo": 0.005253948759774099,
+  "caution": 0.054303448733694026,
+  "nominal": 0.9404426025065319
+ },
+ "molaCheck": null,
+ "elevationRangeM": [
+  -4997,
+  -3132
+ ],
+ "assumptions": "Regional 463 m MOLA cells: slope limits (8 deg caution, 15 deg no-go), science scores and walking speed are concept-level assumptions. Targets are relief-derived candidates, not mapped geology.",
+ "layers": [
+  {
+   "id": "hillshade",
+   "base": true,
+   "title": "MOLA hillshade",
+   "file": "hillshade.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "MGS MOLA 128 ppd (computed hillshade)",
+   "resolution": "463 m",
+   "bounds": [
+    10.3984375,
+    84.4296875,
+    15.40625,
+    89.5703125
+   ]
+  },
+  {
+   "id": "elevation",
+   "title": "Elevation",
+   "file": "elevation.png",
+   "dataType": "TOPOGRAPHIC",
+   "source": "MGS MOLA gridded topography",
+   "resolution": "463 m",
+   "bounds": [
+    10.3984375,
+    84.4296875,
+    15.40625,
+    89.5703125
+   ]
+  },
+  {
+   "id": "slope",
+   "title": "Slope",
+   "file": "slope.png",
+   "dataType": "DERIVED",
+   "source": "Derived from MOLA (Horn)",
+   "resolution": "463 m",
+   "bounds": [
+    10.3984375,
+    84.4296875,
+    15.40625,
+    89.5703125
+   ]
+  },
+  {
+   "id": "atmosphere",
+   "title": "Atmospheric depth (radiation shielding context)",
+   "file": "atmosphere.png",
+   "dataType": "DERIVED",
+   "source": "Derived from MOLA elevation with an assumed 10.8 km scale height",
+   "resolution": "463 m",
+   "note": "Pressure here is 1.34 to 1.59 times the reference level (areoid). Darker = more atmosphere overhead. Context only, not a dose.",
+   "bounds": [
+    10.3984375,
+    84.4296875,
+    15.40625,
+    89.5703125
+   ]
+  },
+  {
+   "id": "traversability",
+   "title": "Traversability",
+   "file": "traversability.png",
+   "dataType": "DERIVED",
+   "source": "Slope + roughness (regional limits)",
+   "resolution": "463 m",
+   "bounds": [
+    10.3984375,
+    84.4296875,
+    15.40625,
+    89.5703125
+   ]
+  }
+ ]
+}
