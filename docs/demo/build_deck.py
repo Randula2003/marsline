@@ -13,8 +13,8 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
-TEAM_NAME = "[Team name]"
-MEMBERS = "[Member names]"
+TEAM_NAME = "MartianPR"
+MEMBERS = "Poorna Weerasekara and Randula Hettiarachchi"
 LIVE_URL = "[Live app URL]"
 REPO = "github.com/Randula2003/marsline"
 

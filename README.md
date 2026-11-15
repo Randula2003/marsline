@@ -12,6 +12,7 @@ It is a Next.js + Firebase application. If Firebase is not configured it falls b
 |---|---|
 | **Surface map** | Four study areas (Jezero in detail; Nili Fossae, Syrtis Major and Isidis Planitia regional). Switchable layers (imagery, thermal, elevation, slope, traversability, science value, atmospheric depth, geology), terrain readout on hover, an A* route planner (distance, walking time, climb, elevation profile, spacewalk-limit warning), adjustable assumptions, a **spacewalk window** (when a walk fits in daylight and above a temperature limit), a **reality check against every real Perseverance drive**, one-page map download |
 | **Current conditions** | Real Perseverance MEDA measurements for four seasons (temperature, pressure, humidity, wind), real rover photos from the same sols, and live retrieval of NASA PDS index files |
+| **Datasets used** | Every dataset behind the app (15 listed, 10 used): agency, resolution, coverage, how it is used, source links, credits, previews, and where the derived files are in the repository. Items from the supplied zip that the app does not use are marked, with the reason |
 | **Science data layers**, **Route planner**, **Radiation context** | Layer catalogue, saved waypoints and route distances, published radiation measurements as context only (no crew dose) |
 | **Life support**, **Mission communications**, **Mission log**, **Wrist interface** | Simulated resource snapshots, a simulated station message log, mission notes, a wearable-style status view |
 | **Data & Firebase** | Connection status, a Firebase setup checklist, and demo-mode controls |
@@ -136,6 +137,24 @@ All routes except `GET /api/firebase-status` require `Authorization: Bearer <Fir
 - `GET /api/nasa/catalog`: the user's dataset catalogue.
 - `GET /api/nasa/meda/:sensor`: fetch an allow-listed MEDA PDS index (`ATS`, `WIND`, `PS`, `RDS`, `RHS`, `TIRS`) and record the retrieval. Limited to 12 requests per UID per minute and 2 MiB per upstream response. In demo mode, and only when the server has no Firebase credentials, the fetch works without sign-in and stores nothing.
 
+## Datasets
+
+The **Datasets used** page in the app lists every dataset (the list lives in `src/lib/datasets.ts`, and `npm test` checks that every file it names exists). Summary:
+
+| Used in the app | What for |
+|---|---|
+| Mars Express HRSC elevation (ESA) | elevation, slope, roughness, traversability, atmospheric depth, route profiles |
+| MRO CTX mosaic | optical layer, target previews |
+| Mars Odyssey THEMIS day/night mosaics | thermal layers |
+| USGS SIM 3464 geologic map | geology overlay, walking cost, science value, targets |
+| MGS MOLA topography | three regional areas, check of the HRSC elevation |
+| Perseverance MEDA index and measurements | weather charts, spacewalk window |
+| Perseverance raw images | rover photos |
+| Perseverance real traverse | reality check of the map and planner |
+| Curiosity RAD published values | radiation context (cited, never a crew dose) |
+
+Also shown, with the reason they are not analysed: the Curiosity route image (reference), the two global MOLA/THEMIS mosaics (no map coordinates), the other MEDA indexes and the SIM 3464 PDFs. Preview pictures are built by `scripts/make_dataset_previews.py` from the repository's own data.
+
 ## Study-area data pipeline
 
 The map, layers and route planner are driven by files in `public/data/regions/<area>/`, **generated** from the NASA/ESA/USGS data and **committed**, so the app runs from a fresh clone. To regenerate or change them:
@@ -174,12 +193,13 @@ Helper scripts (all outputs are committed, so you only run these to refresh them
 ```text
 src/app/                   Next.js App Router: page, layout, API routes
 src/components/            mission-console (all pages), mars-map (canvas map + route planner),
-                           meda-charts, rover-gallery, firebase-setup, eva-window, validation-panel
+                           meda-charts, rover-gallery, firebase-setup, eva-window, validation-panel, datasets-page
 src/lib/                   terrain.ts (layers + A* planner), eva.ts (sun and window maths), demo-store.ts (browser demo backend),
                            firebase-*.ts, server-auth.ts, firestore-workspace.ts, nasa.ts, validation.ts, constants.ts
 public/data/regions/       generated study-area data (committed) + index.json
+public/data/datasets/      small preview pictures for the Datasets page
 notebooks/                 01_feature_engineering.ipynb, strip_outputs.py
-scripts/                   download_meda.py, fetch_rover_images.py, fetch_rover_traverse.py, check-firebase.mjs
+scripts/                   download_meda.py, fetch_rover_images.py, fetch_rover_traverse.py, make_dataset_previews.py, check-firebase.mjs
 tests/                     route-planner and data tests
 docs/demo/                 7-slide Space Apps demo deck (PowerPoint + PDF) and its build scripts
 .github/workflows/         CI
