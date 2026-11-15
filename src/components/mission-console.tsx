@@ -8,6 +8,7 @@ import MarsMap, { type RouteSave } from "@/components/mars-map";
 import MedaCharts from "@/components/meda-charts";
 import RoverGallery from "@/components/rover-gallery";
 import FirebaseSetup from "@/components/firebase-setup";
+import DatasetsPage from "@/components/datasets-page";
 
 type Waypoint = { id: string; name: string; type: string; latitudeDeg: number | string; longitudeDeg: number | string; notes?: string | null; sequence?: number };
 type LogEntry = { id: string; title: string; note: string; logType: string; occurredAt: string };
@@ -18,7 +19,7 @@ type MedaResult = { sensor: string; title: string; sourceUrl: string; retrievedA
 
 const nav = [
   ["overview", "Mission overview", "◫", "MISSION"], ["map", "Surface map", "⌖", ""],
-  ["conditions", "Current conditions", "◉", ""], ["science", "Science data layers", "⌁", ""],
+  ["conditions", "Current conditions", "◉", ""], ["science", "Science data layers", "⌁", ""], ["datasets", "Datasets used", "▦", ""],
   ["routes", "Route planner", "⌁", ""], ["lifesupport", "Life support", "♡", "CREW SYSTEMS"],
   ["radiation", "Radiation context", "◌", ""], ["watch", "Wrist interface", "◷", ""],
   ["communications", "Mission communications", "✉", "OPERATIONS"],
@@ -295,6 +296,10 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
           <div className="metric-grid three">{layers.map((item) => <DatasetCard key={item.instrument} {...item} />)}</div>
           <div className="metric-grid three">{NASA_DATASETS.slice(7).map((item) => <DatasetCard key={item.productCode} instrument={item.instrument} title={item.title} kind={item.dataType} detail={item.description} url={item.sourceUrl} />)}</div>
           <Notice title="Coverage is not uniform">A blank tile or missing footprint means that a dataset has no coverage at that location; it does not indicate the absence of a surface feature. Confirm footprint, projection, observation time and processing level.</Notice>
+        </>}
+        {view === "datasets" && <>
+          <PageHead eyebrow="NASA · ESA · USGS · DATA PROVENANCE" title="Datasets used" desc="Every dataset behind Marsline: where it comes from, how it is used, and where the files are." />
+          <DatasetsPage onOpenMap={() => navigate("map")} />
         </>}
         {view === "routes" && <>
           <PageHead eyebrow="EXCURSION PLANNING · MARS COORDINATES" title="Route planner" desc="Create saved waypoints and estimate direct Mars surface distance between consecutive stops." />
