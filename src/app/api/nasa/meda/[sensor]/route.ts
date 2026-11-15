@@ -7,8 +7,9 @@ import { isFirebaseAdminConfigured } from "@/lib/firebase-admin";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-// Browser demo mode: when the server has no Firebase credentials, allow the allow-listed NASA index fetch without sign-in
-// (nothing is stored). A small in-memory limit protects the NASA server.
+// Browser demo mode: allow the allow-listed NASA index fetch without sign-in (nothing is stored) when the server has no Firebase
+// credentials, or whenever the app is not running a production build (so "Use demo mode" also works in local development when
+// credentials exist but Firestore or Anonymous sign-in is not set up yet). A small in-memory limit protects the NASA server.
 const demoHits: number[] = [];
 function demoAllowed(): boolean {
   const now = Date.now();
@@ -22,7 +23,7 @@ export async function GET(request: Request, context: { params: Promise<{ sensor:
   let fetchId: string | undefined;
   let sensor: MedaSensor | undefined;
   try {
-    const demo = request.headers.get("x-marsline-demo") === "1" && !isFirebaseAdminConfigured();
+    const demo = request.headers.get("x-marsline-demo") === "1" && (process.env.NODE_ENV !== "production" || !isFirebaseAdminConfigured());
     const { sensor: raw } = await context.params;
     const sensorName = raw.toUpperCase();
     if (!Object.prototype.hasOwnProperty.call(MEDA_INDEXES, sensorName)) {

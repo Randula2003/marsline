@@ -14,7 +14,8 @@ It is a Next.js + Firebase application. If Firebase is not configured it falls b
 | **Current conditions** | Real Perseverance MEDA measurements for four seasons (temperature, pressure, humidity, wind), real rover photos from the same sols, and live retrieval of NASA PDS index files |
 | **Datasets used** | Every dataset behind the app (15 listed, 10 used): agency, resolution, coverage, how it is used, source links, credits, previews, and where the derived files are in the repository. Items from the supplied zip that the app does not use are marked, with the reason |
 | **Science data layers**, **Route planner**, **Radiation context** | Layer catalogue, saved waypoints and route distances, published radiation measurements as context only (no crew dose) |
-| **Life support**, **Mission communications**, **Mission log**, **Wrist interface** | Simulated resource snapshots, a simulated station message log, mission notes, a wearable-style status view |
+| **Life support**, **Mission communications**, **Mission log** | Simulated resource snapshots, a simulated station message log, mission notes |
+| **Live mission** (tablet screen) | Simulated live crew position, weather at the crew (archived MEDA baseline plus a simulated dust storm), additional routes around storms and hazards, and a saved route and surface handoff for the next crew member |
 | **Data & Firebase** | Connection status, a Firebase setup checklist, and demo-mode controls |
 
 ## Quick start

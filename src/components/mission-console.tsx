@@ -1,10 +1,14 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { MEDA_INDEXES, type MedaSensor, NASA_DATASETS, MARS_MEAN_RADIUS_KM } from "@/lib/constants";
-import { enableDemoMode, firebaseRequest, isDemoMode } from "@/lib/firebase-client";
+import { APP_VERSION, MEDA_INDEXES, type MedaSensor, NASA_DATASETS, MARS_MEAN_RADIUS_KM, MISSION_PLAN_SOLS, MISSION_SOL, MISSION_SOL_LABEL } from "@/lib/constants";
+import { DATASETS } from "@/lib/datasets";
+import { disableDemoMode, enableDemoMode, firebaseRequest, isDemoMode, isFirebaseClientConfigured } from "@/lib/firebase-client";
 import { resetDemoData } from "@/lib/demo-store";
 import MarsMap, { type RouteSave } from "@/components/mars-map";
+import LiveMission from "@/components/live-mission";
+import type { HandoffRecord } from "@/lib/handoff";
+import { useLiveSession, type HandoffDraft } from "@/lib/use-live-session";
 import MedaCharts from "@/components/meda-charts";
 import RoverGallery from "@/components/rover-gallery";
 import FirebaseSetup from "@/components/firebase-setup";
@@ -18,10 +22,10 @@ type InitialData = { databaseReady: boolean; mission: MissionData | null };
 type MedaResult = { sensor: string; title: string; sourceUrl: string; retrievedAt: string; httpStatus: number; byteCount: number; rowCount: number; sourceLastModified: string | null; note: string };
 
 const nav = [
-  ["overview", "Mission overview", "◫", "MISSION"], ["map", "Surface map", "⌖", ""],
+  ["overview", "Mission overview", "◫", "MISSION"], ["live", "Live mission", "◎", ""], ["map", "Surface map", "⌖", ""],
   ["conditions", "Current conditions", "◉", ""], ["science", "Science data layers", "⌁", ""], ["datasets", "Datasets used", "▦", ""],
   ["routes", "Route planner", "⌁", ""], ["lifesupport", "Life support", "♡", "CREW SYSTEMS"],
-  ["radiation", "Radiation context", "◌", ""], ["watch", "Wrist interface", "◷", ""],
+  ["radiation", "Radiation context", "◌", ""],
   ["communications", "Mission communications", "✉", "OPERATIONS"],
   ["log", "Mission log", "▤", "OPERATIONS"], ["settings", "Data & Firebase", "⚙", ""]
 ] as const;
@@ -67,7 +71,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
   const [messageSubject, setMessageSubject] = useState("");
   const [messageBody, setMessageBody] = useState("");
   const [messagePriority, setMessagePriority] = useState<"ROUTINE" | "PRIORITY" | "URGENT">("ROUTINE");
-  const [messageSol, setMessageSol] = useState("018");
+  const [messageSol, setMessageSol] = useState(MISSION_SOL_LABEL);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [meda, setMeda] = useState<Partial<Record<MedaSensor, MedaResult | { error: string }>>>({});
   const [busySensor, setBusySensor] = useState<MedaSensor | "">("");
@@ -86,10 +90,16 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
   const [lastHealth, setLastHealth] = useState("Not checked");
   const [healthChecking, setHealthChecking] = useState(false);
   const [demo, setDemo] = useState(false);
+  const [handoffs, setHandoffs] = useState<HandoffRecord[]>([]);
+  const persistHandoffRef = useRef<(draft: HandoffDraft, notes: string) => Promise<void>>(async () => {});
+  // Ends of a traverse (arrived or stopped) are saved automatically so the route walked is never lost.
+  const live = useLiveSession({ onEnd: (d) => void persistHandoffRef.current(d, d.reason === "arrived" ? "Saved automatically when the traverse reached its destination." : "Saved automatically when the traverse was stopped.") });
+  const [targetCount, setTargetCount] = useState<number | null>(null);
   const missionCode = initial.mission?.code ?? "ARES-FS-01";
   const counts = initial.mission?.counts;
+  const progressPct = Math.round(MISSION_SOL / MISSION_PLAN_SOLS * 100);
+  const where = demo ? "BROWSER STORAGE" : "FIRESTORE";   // wording for buttons and notes: where saved data goes
   const routeDistance = useMemo(() => waypoints.slice(1).reduce((sum, wp, i) => sum + marsDistance(waypoints[i], wp), 0), [waypoints]);
-  const medaCount = Object.keys(meda).length;
   const waterPct = resources.waterCapacityLiters > 0 ? Math.max(0, Math.min(100, resources.waterRemainingLiters / resources.waterCapacityLiters * 100)) : 0;
 
   const notify = useCallback((text: string) => { setToast(text); window.setTimeout(() => setToast(""), 3200); }, []);
@@ -124,10 +134,11 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
   }, [notify]);
   const refreshWorkspace = useCallback(async () => {
     try {
-      const [w, l, resourcesResult, messageResult] = await Promise.all([firebaseRequest("/api/waypoints"), firebaseRequest("/api/logs"), firebaseRequest("/api/life-support"), firebaseRequest("/api/messages")]);
+      const [w, l, resourcesResult, messageResult, handoffResult] = await Promise.all([firebaseRequest("/api/waypoints"), firebaseRequest("/api/logs"), firebaseRequest("/api/life-support"), firebaseRequest("/api/messages"), firebaseRequest("/api/handoffs")]);
       if (w.ok) setWaypoints((await w.json()).data ?? []);
       if (l.ok) setLogs((await l.json()).data ?? []);
       if (messageResult.ok) setMessages((await messageResult.json()).data ?? []);
+      if (handoffResult.ok) setHandoffs((await handoffResult.json()).data ?? []);
       if (resourcesResult.ok) { const latest = (await resourcesResult.json()).data; if (latest) setResources({ oxygenReservePct: latest.oxygenReservePct, waterRemainingLiters: latest.waterRemainingLiters, waterCapacityLiters: latest.waterCapacityLiters, waterUseLitersDay: latest.waterUseLitersDay, co2ScrubberPct: latest.co2ScrubberPct, powerReservePct: latest.powerReservePct }); }
     } catch { /* Keep the preview state if Firebase is not configured. */ }
   }, []);
@@ -149,9 +160,27 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
     return () => window.clearInterval(timer);
   }, [checkHealth, notify, refreshWorkspace]);
 
+  // Number of science targets in the Jezero study area (read from the generated map metadata instead of a fixed number).
+  useEffect(() => {
+    let alive = true;
+    fetch("/data/regions/jezero/meta.json").then((r) => (r.ok ? r.json() : null)).then((m: { targets?: unknown[] } | null) => { if (alive && m?.targets) setTargetCount(m.targets.length); }).catch(() => { /* keep the fallback count */ });
+    return () => { alive = false; };
+  }, []);
+
   async function switchToDemo() {
     enableDemoMode(); setDemo(true);
     await checkHealth(); await refreshWorkspace();
+  }
+  async function switchToFirebase() {
+    disableDemoMode(); setDemo(false);
+    try {
+      const res = await firebaseRequest("/api/workspace", { method: "POST" });
+      if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Could not initialize Firebase workspace");
+      await checkHealth(); await refreshWorkspace();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Firebase setup is required";
+      setDbReady(false); setDbInfo(message); notify(`Firebase is not ready: ${message}`);
+    }
   }
   async function resetDemo() {
     resetDemoData(); await refreshWorkspace(); notify("Demo data reset to the starter state");
@@ -172,6 +201,35 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
       const log = await post("/api/logs", { title: `Route planned: ${start.label} to ${end.label}`.slice(0, 120), note: summary, logType: "ROUTE_UPDATE" });
       setWaypoints((old) => [...old, ...created]); setLogs((old) => [log, ...old]); notify(`Route saved to ${store()}`);
     } catch (e) { notify(e instanceof Error ? e.message : "Database unavailable"); }
+  }
+  // Save the route walked, the planned and alternate routes, hazards and surface conditions for the next crew member.
+  async function persistHandoff(d: HandoffDraft, notes: string) {
+    if (!dbReady) { notify("Handoff not saved: storage is not connected. The trail is kept on this tablet."); return; }
+    const r6 = (n: number) => Number(n.toFixed(6)), ll = (p: { lat: number; lon: number }) => ({ lat: r6(p.lat), lon: r6(p.lon) });
+    const first = d.plan[0], last = d.plan[d.plan.length - 1];
+    const body = {
+      title: `${d.fromLabel} to ${d.toLabel}`.slice(0, 120), callsign: senderCallsign, notes, reason: d.reason, regionId: d.regionId, marsSol: MISSION_SOL,
+      start: first ? { label: d.fromLabel.slice(0, 120), ...ll(first) } : null, end: last ? { label: d.toLabel.slice(0, 120), ...ll(last) } : null,
+      plannedRoute: d.plan.map(ll), alternate: d.alternate ? { label: d.alternate.label.slice(0, 160), points: d.alternate.points.map(ll) } : null,
+      trail: d.trail.map((p) => ({ ...ll(p), t: Math.round(p.t * 10) / 10 })), distanceTraveledM: Math.round(d.distanceTraveledM), lastPosition: ll(d.lastPosition),
+      conditions: { level: d.conditions.level, scenario: d.scenario, headline: d.conditions.headline, tempC: Math.round(d.conditions.tempC), windMs: Math.round(d.conditions.windMs * 10) / 10, pressurePa: Math.round(d.conditions.pressurePa), dustTau: Math.round(d.conditions.dustTau * 10) / 10, visibilityKm: Math.round(d.conditions.visibilityKm * 10) / 10, localHour: Math.round(d.conditions.localHour * 100) / 100 },
+      hazards: waypoints.filter((w) => w.type === "HAZARD").slice(0, 40).map((w) => ({ label: w.name.slice(0, 120), lat: r6(Number(w.latitudeDeg)), lon: r6(Number(w.longitudeDeg)), radiusM: 300 })),
+      storm: d.zone ? { ...ll(d.zone), radiusM: Math.round(d.zone.radiusM) } : null
+    };
+    try {
+      const res = await firebaseRequest("/api/handoffs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const json = await res.json(); if (!res.ok) throw new Error(json.error ?? "Unable to save handoff");
+      setHandoffs((old) => [json.data, ...old]); notify(`Route and surface saved for the next crew member (${store()})`);
+      live.addFeed("ok", `Handoff saved: ${(d.distanceTraveledM / 1000).toFixed(2)} km walked, ${body.hazards.length} hazard marker(s).`);
+    } catch (e) { notify(e instanceof Error ? e.message : "Unable to save handoff"); }
+  }
+  useEffect(() => { persistHandoffRef.current = persistHandoff; });
+  async function markHazard(lat: number, lon: number) {
+    try {
+      const res = await firebaseRequest("/api/waypoints", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: `Hazard at ${lat.toFixed(4)}, ${lon.toFixed(4)}`, type: "HAZARD", latitudeDeg: Number(lat.toFixed(6)), longitudeDeg: Number(lon.toFixed(6)), notes: "Marked by the crew during a live traverse. Routes keep 300 m clear of it." }) });
+      const json = await res.json(); if (!res.ok) throw new Error(json.error ?? "Unable to mark hazard");
+      setWaypoints((old) => [...old, json.data]); live.addFeed("alert", `Hazard marked at ${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E. New routes avoid it.`); notify("Hazard marked");
+    } catch (e) { notify(e instanceof Error ? e.message : "Unable to mark hazard"); }
   }
   async function addWaypoint(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -248,26 +306,26 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
       <a className="brand" href="#overview" onClick={(e) => { e.preventDefault(); navigate("overview"); }}><span className="brand-mark">M</span><span><b>MARSLINE</b><small>MISSION INTELLIGENCE</small></span></a>
       <div className="mission-selector"><span className="overline">ACTIVE EXPEDITION</span><strong>{missionCode}</strong><small><i className="pulse" /> SURFACE OPERATIONS</small></div>
       <nav className="side-nav">{nav.map(([id, label, glyph, group]) => <div key={id}>{group && <div className="nav-group">{group}</div>}<button className={`nav-item ${view === id ? "active" : ""}`} onClick={() => navigate(id)}><span>{glyph}</span>{label}</button></div>)}</nav>
-      <div className="sidebar-bottom"><div className="connection-card"><i className={`connection-dot ${dbReady ? "online" : ""}`} /><div><b>{demo ? "DEMO MODE" : dbReady ? "FIREBASE CONNECTED" : "FIREBASE NOT CONFIGURED"}</b><small>{demo ? "Data saved in this browser" : dbReady ? "Firebase Authentication + Cloud Firestore" : dbInfo}</small></div></div><div className="sidebar-foot">BUILD 4.0 · NEXT.JS + FIREBASE<br />NASA PDS · MARS TREK WMTS</div></div>
+      <div className="sidebar-bottom"><div className="connection-card"><i className={`connection-dot ${dbReady ? "online" : ""}`} /><div><b>{demo ? "DEMO MODE" : dbReady ? "FIREBASE CONNECTED" : "FIREBASE NOT CONFIGURED"}</b><small>{demo ? "Data saved in this browser" : dbReady ? "Firebase Authentication + Cloud Firestore" : dbInfo}</small></div></div><div className="sidebar-foot">BUILD {APP_VERSION} · NEXT.JS + FIREBASE<br />NASA PDS · MARS TREK WMTS</div></div>
     </aside>
     <main className="main-shell">
-      <header className="topbar"><button className="mobile-menu" onClick={() => setMobileOpen((v) => !v)} aria-label="Toggle navigation">☰</button><div className="breadcrumb"><span>ARES EXPEDITION</span><b>/</b><strong>{nav.find((item) => item[0] === view)?.[1]}</strong></div><div className="topbar-right"><span className="clock">UTC+05:30 {missionTime}</span><span className="sol-chip">SOL <b>018</b></span><span className={`db-chip ${dbReady ? "connected" : ""}`}>{demo ? "DEMO MODE" : dbReady ? "FIREBASE ONLINE" : "FIREBASE SETUP"}</span></div></header>
+      <header className="topbar"><button className="mobile-menu" onClick={() => setMobileOpen((v) => !v)} aria-label="Toggle navigation">☰</button><div className="breadcrumb"><span>ARES EXPEDITION</span><b>/</b><strong>{nav.find((item) => item[0] === view)?.[1]}</strong></div><div className="topbar-right"><span className="clock">UTC+05:30 {missionTime}</span><span className="sol-chip">SOL <b>{MISSION_SOL_LABEL}</b></span><span className={`db-chip ${dbReady ? "connected" : ""}`}>{demo ? "DEMO MODE" : dbReady ? "FIREBASE ONLINE" : "FIREBASE SETUP"}</span></div></header>
       <div className="page-content">
         {view === "overview" && <>
           <PageHead eyebrow="HUMAN EXPLORATION · SURFACE OPERATIONS" title="Mission overview" desc="One operational picture for terrain, environment, science objectives and crew resources." right={<span className="heading-status"><i className="pulse" /> WORKSPACE READY<small>{demo ? "BROWSER DEMO MODE" : dbReady ? "CLOUD FIRESTORE MODE" : "FIREBASE SETUP REQUIRED"}</small></span>} />
           {demo && <div className="setup-banner"><b>Demo mode.</b><span>Every feature works without Firebase: waypoints, logs, messages and life-support snapshots are saved in this browser only. Add Firebase settings to save to Cloud Firestore instead.</span><button onClick={() => navigate("settings")}>FIREBASE SETUP →</button></div>}
           {!demo && !dbReady && <div className="setup-banner"><b>Firebase is not connected.</b><span>Add your Firebase Web App settings and Admin SDK credentials, or run the whole application in demo mode now. Run <code>npm run check:firebase</code> to see what is missing.</span><button onClick={() => void switchToDemo()}>USE DEMO MODE</button><button onClick={() => navigate("settings")}>FIREBASE SETUP →</button></div>}
           <div className="hero-grid"><article className="hero-card"><div className="hero-planet"><div className="planet" /><div className="orbit one" /><div className="orbit two" /></div><div className="hero-copy"><span className="overline">MISSION TARGET</span><h2>Jezero Crater</h2><p>Perseverance exploration region · western Isidis Planitia</p><div className="coordinates"><span>18.38° N</span><span>77.58° E</span></div><button className="text-action" onClick={() => navigate("map")}>OPEN NASA SURFACE MAP ↗</button></div></article>
-            <article className="panel mission-card"><div className="panel-top"><span>EXPEDITION STATUS</span><span className="tag orange">{initial.mission?.status ?? "SEED REQUIRED"}</span></div><div className="sol-number"><strong>018</strong><span>SOL</span></div><div className="progress-track"><i style={{ width: "36%" }} /></div><div className="progress-meta"><span>Mission day 18</span><b>36% · concept timeline</b></div><div className="mini-stats"><div><small>SCIENCE TARGETS</small><b>{counts?.targets ?? 0}</b></div><div><small>WAYPOINTS</small><b>{waypoints.length}</b></div><div><small>LOG ENTRIES</small><b>{logs.length}</b></div></div></article></div>
+            <article className="panel mission-card"><div className="panel-top"><span>EXPEDITION STATUS</span><span className="tag orange">{initial.mission?.status ?? "SEED REQUIRED"}</span></div><div className="sol-number"><strong>{MISSION_SOL_LABEL}</strong><span>SOL</span></div><div className="progress-track"><i style={{ width: `${progressPct}%` }} /></div><div className="progress-meta"><span>Mission day {MISSION_SOL} of {MISSION_PLAN_SOLS}</span><b>{progressPct}% · concept timeline</b></div><div className="mini-stats"><div><small>SCIENCE TARGETS</small><b>{targetCount ?? counts?.targets ?? 0}</b></div><div><small>WAYPOINTS</small><b>{waypoints.length}</b></div><div><small>LOG ENTRIES</small><b>{logs.length}</b></div></div></article></div>
           <SectionTitle eyebrow="OPERATIONAL PICTURE" title="Mission systems" note="Resource figures are simulations" />
-          <div className="metric-grid four"><Metric label="OXYGEN RESERVE" value={`${resources.oxygenReservePct}%`} symbol="O₂" note="SIMULATED" pct={resources.oxygenReservePct} /><Metric label="WATER RESERVE" value={`${Math.round(waterPct)}%`} symbol="H₂O" note="SIMULATED" pct={waterPct} /><Metric label="POWER RESERVE" value={`${resources.powerReservePct}%`} symbol="⚡" note="SIMULATED" pct={resources.powerReservePct} /><Metric label="NASA DATASETS" value={String(counts?.datasets ?? NASA_DATASETS.length)} symbol="✦" note="CATALOGUE RECORDS" pct={89} /></div>
+          <div className="metric-grid four"><Metric label="OXYGEN RESERVE" value={`${resources.oxygenReservePct}%`} symbol="O₂" note="SIMULATED" pct={resources.oxygenReservePct} /><Metric label="WATER RESERVE" value={`${Math.round(waterPct)}%`} symbol="H₂O" note="SIMULATED" pct={waterPct} /><Metric label="POWER RESERVE" value={`${resources.powerReservePct}%`} symbol="⚡" note="SIMULATED" pct={resources.powerReservePct} /><Metric label="DATASETS DOCUMENTED" value={String(DATASETS.length)} symbol="✦" note={`${DATASETS.filter((d) => d.status === "used").length} USED IN THE APP`} pct={DATASETS.filter((d) => d.status === "used").length / DATASETS.length * 100} /></div>
           <div className="two-col"><article className="panel"><div className="panel-top"><span>MISSION WATCHLIST</span><span className="tag">DATA PROVENANCE</span></div><Watch title="Environmental observations" desc="Perseverance MEDA indexes are rover-local PDS archive products, not live Mars weather." button="CONDITIONS" onClick={() => navigate("conditions")} /><Watch title="Terrain and elevation" desc="NASA Mars Trek exposes global MOLA / HRSC layers and targeted image footprints." button="MAP" onClick={() => navigate("map")} /><Watch title="Mineralogy and subsurface" desc="Compare CRISM spectral footprints and SHARAD radar tracks with optical imagery." button="SCIENCE" onClick={() => navigate("science")} /></article>
             <article className="panel"><div className="panel-top"><span>QUICK OPERATIONS</span><span className="tag">WORKSPACE</span></div><div className="quick-grid"><Quick title="Plan route" symbol="＋" onClick={() => navigate("routes")} /><Quick title="Check conditions" symbol="◉" onClick={() => navigate("conditions")} /><Quick title="Life support" symbol="♡" onClick={() => navigate("lifesupport")} /><Quick title="Science note" symbol="▤" onClick={() => navigate("log")} /></div></article></div>
           <Notice title="Scientific and safety scope">NASA observations are historical, location-specific and instrument-dependent. Resource reserves and mission values are software simulations, not certified life-support calculations.</Notice>
         </>}
         {view === "map" && <>
           <PageHead eyebrow="NASA ORBITAL DATA · GEOSPATIAL CONTEXT" title="Surface map" desc="Pick a study area: Jezero in detail, plus regional views of Nili Fossae, Syrtis Major and Isidis Planitia. Layered NASA and USGS data with terrain-aware routes." right={<a className="button primary" href="https://trek.nasa.gov/mars/" target="_blank" rel="noreferrer">OPEN NASA MARS TREK ↗</a>} />
-          <MarsMap waypoints={waypoints} onSaveRoute={dbReady ? saveRoute : undefined} />
+          <MarsMap waypoints={waypoints} onSaveRoute={dbReady ? saveRoute : undefined} live={live} handoffs={handoffs} canSaveHandoff={dbReady} onSaveHandoff={(notes) => persistHandoff(live.draft("manual"), notes)} onMarkHazard={(lat, lon) => void markHazard(lat, lon)} />
           <SectionTitle eyebrow="MISSION OVERLAY DATA" title="Saved waypoints" note={`${waypoints.length} saved records`} />
           <div className="metric-grid three">{waypoints.length ? waypoints.map((w) => <article className="panel waypoint-card" key={w.id}><b>{w.name}</b><span className="tag">{w.type}</span><small>{Number(w.latitudeDeg).toFixed(5)}° · {Number(w.longitudeDeg).toFixed(5)}°</small></article>) : <div className="empty-state">No waypoint records yet. Add them in Route Planner.</div>}</div>
           <Notice title="Where this data comes from">Layers were engineered offline by <code>notebooks/01_feature_engineering.ipynb</code>. Jezero uses Mars Express HRSC elevation (75 m), MRO CTX imagery, Mars Odyssey THEMIS and the USGS geologic map (SIM 3464). The other areas use the global MGS MOLA elevation tile (463 m) only, so their slopes are smoothed and their targets are relief-derived. Slope limits and scores are concept-level assumptions, not NASA-certified mobility limits. Coordinates use the Mars 2000 sphere, east-positive longitude.</Notice>
@@ -278,7 +336,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
           <div className="data-banner"><div><span className="overline">OBSERVATION PLATFORM</span><h2>Perseverance · MEDA</h2><p>Mars Environmental Dynamics Analyzer. PDS publishes separate calibrated and derived product indexes for the instrument suite.</p></div><a className="button outline" href="https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/meda.html" target="_blank" rel="noreferrer">PDS MEDA DOCUMENTATION ↗</a></div>
           <MedaCharts />
           <RoverGallery />
-          <SectionTitle eyebrow="PDS CSV PRODUCT INDEXES" title="Retrieve source indexes" note="Successful fetches are recorded in Firestore" />
+          <SectionTitle eyebrow="PDS CSV PRODUCT INDEXES" title="Retrieve source indexes" note={demo ? "Demo mode: fetches are not stored" : "Successful fetches are recorded in Firestore"} />
           <div className="metric-grid three">{(Object.keys(MEDA_INDEXES) as MedaSensor[]).map((sensor) => {
             const result = meda[sensor]; const config = MEDA_INDEXES[sensor];
             return <article className="panel sensor-card" key={sensor}><div className="sensor-head"><span className="sensor-code">{sensor}</span><span className="tag">PDS INDEX</span></div><h3>{config.title}</h3><p>Perseverance rover archive · Jezero region</p>
@@ -310,14 +368,14 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
             <label>Latitude (°)<input type="number" required min={-90} max={90} step="0.000001" value={wpLat} onChange={(e) => setWpLat(e.target.value)} /></label>
             <label>Longitude (°E)<input type="number" required min={0} max={360} step="0.000001" value={wpLon} onChange={(e) => setWpLon(e.target.value)} /></label>
             <label className="wide">Notes<textarea rows={2} value={wpNotes} onChange={(e) => setWpNotes(e.target.value)} maxLength={1000} placeholder="Image footprint, science rationale or terrain note..." /></label>
-            <button className="button primary wide" type="submit">＋ SAVE WAYPOINT TO FIRESTORE</button>
+            <button className="button primary wide" type="submit">＋ SAVE WAYPOINT TO {where}</button>
           </form></article>
           <article className="panel route-summary"><div className="panel-top"><span>ROUTE DISTANCE</span><span className="tag orange">MARS RADIUS</span></div><div className="distance-number">{routeDistance.toFixed(2)} <span>KM</span></div><p>Great-circle estimate using mean Mars radius of {MARS_MEAN_RADIUS_KM.toLocaleString()} km.</p><div className="data-line"><span>Waypoints</span><b>{waypoints.length}</b></div><div className="data-line"><span>Coordinate system</span><b>IAU 2000 / 49900</b></div><div className="data-line"><span>Terrain correction</span><b>Use Surface map planner</b></div></article></div>
-          <article className="panel"><div className="panel-top"><span>SAVED WAYPOINTS</span><span className="tag">{waypoints.length} RECORDS</span></div>{waypoints.length === 0 ? <div className="empty-state">No waypoint records. Connect Firebase and initialize the starter workspace to begin.</div> : <div className="table-wrap"><table><thead><tr><th>SEQ</th><th>NAME</th><th>TYPE</th><th>LATITUDE</th><th>LONGITUDE</th><th>LEG DISTANCE</th><th /></tr></thead><tbody>{waypoints.map((w, i) => <tr key={w.id}><td>{i + 1}</td><td><b>{w.name}</b></td><td>{w.type}</td><td>{Number(w.latitudeDeg).toFixed(5)}°</td><td>{Number(w.longitudeDeg).toFixed(5)}°</td><td>{i ? `${marsDistance(waypoints[i - 1], w).toFixed(2)} km` : "START"}</td><td><button className="remove" onClick={() => removeWaypoint(w.id)}>REMOVE</button></td></tr>)}</tbody></table></div>}</article>
+          <article className="panel"><div className="panel-top"><span>SAVED WAYPOINTS</span><span className="tag">{waypoints.length} RECORDS</span></div>{waypoints.length === 0 ? <div className="empty-state">No waypoint records yet. Add one above or plan a route on the Surface map.</div> : <div className="table-wrap"><table><thead><tr><th>SEQ</th><th>NAME</th><th>TYPE</th><th>LATITUDE</th><th>LONGITUDE</th><th>LEG DISTANCE</th><th /></tr></thead><tbody>{waypoints.map((w, i) => <tr key={w.id}><td>{i + 1}</td><td><b>{w.name}</b></td><td>{w.type}</td><td>{Number(w.latitudeDeg).toFixed(5)}°</td><td>{Number(w.longitudeDeg).toFixed(5)}°</td><td>{i ? `${marsDistance(waypoints[i - 1], w).toFixed(2)} km` : "START"}</td><td><button className="remove" onClick={() => removeWaypoint(w.id)}>REMOVE</button></td></tr>)}</tbody></table></div>}</article>
           <Notice title="Route limitation">Straight-line distances do not account for slope, boulders, roughness, suit mobility, dust, visibility or obstacles. Use the Surface map to plan a terrain-aware route in any study area.</Notice>
         </>}
         {view === "lifesupport" && <>
-          <PageHead eyebrow="CREW RESOURCE MODEL" title="Life support" desc="Save an editable resource snapshot in Cloud Firestore. These values are fictional demonstrations." />
+          <PageHead eyebrow="CREW RESOURCE MODEL" title="Life support" desc={`Save an editable resource snapshot in ${demo ? "this browser" : "Cloud Firestore"}. These values are fictional demonstrations.`} />
           <div className="simulation-banner">SIMULATION ONLY · NOT REAL LIFE-SUPPORT TELEMETRY OR OPERATIONAL GUIDANCE</div>
           <form className="panel resource-form" onSubmit={addResourceSnapshot}><div className="resource-grid">
             <ResourceField label="Oxygen reserve (%)" value={resources.oxygenReservePct} max={100} onChange={(v) => setResources((s) => ({ ...s, oxygenReservePct: v }))} />
@@ -326,7 +384,7 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
             <ResourceField label="Planned water use (L/day)" value={resources.waterUseLitersDay} max={10000} onChange={(v) => setResources((s) => ({ ...s, waterUseLitersDay: v }))} />
             <ResourceField label="CO₂ scrubber model (%)" value={resources.co2ScrubberPct} max={100} onChange={(v) => setResources((s) => ({ ...s, co2ScrubberPct: v }))} />
             <ResourceField label="Power reserve (%)" value={resources.powerReservePct} max={100} onChange={(v) => setResources((s) => ({ ...s, powerReservePct: v }))} />
-          </div><label className="field-label">Snapshot note<textarea rows={2} value={resourceNotes} onChange={(e) => setResourceNotes(e.target.value)} /></label><button className="button primary" type="submit">SAVE SIMULATED SNAPSHOT TO FIRESTORE</button>
+          </div><label className="field-label">Snapshot note<textarea rows={2} value={resourceNotes} onChange={(e) => setResourceNotes(e.target.value)} /></label><button className="button primary" type="submit">SAVE SIMULATED SNAPSHOT TO {where}</button>
           <div className="resource-preview"><Metric label="OXYGEN" value={`${resources.oxygenReservePct}%`} symbol="O₂" note="SIMULATED" pct={resources.oxygenReservePct} /><Metric label="WATER" value={`${resources.waterRemainingLiters} L`} symbol="H₂O" note="SIMULATED" pct={resources.waterCapacityLiters ? resources.waterRemainingLiters / resources.waterCapacityLiters * 100 : 0} /><Metric label="CO₂ MODEL" value={`${resources.co2ScrubberPct}%`} symbol="CO₂" note="SIMULATED" pct={resources.co2ScrubberPct} /><Metric label="POWER" value={`${resources.powerReservePct}%`} symbol="⚡" note="SIMULATED" pct={resources.powerReservePct} /></div></form>
         </>}
         {view === "radiation" && <>
@@ -340,9 +398,12 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
             <p className="fineprint">Sources: Curiosity RAD at Gale Crater (Hassler et al., 2014, Science 343); MSL RAD during cruise (Zeitlin et al., 2013, Science 340); UNSCEAR for the Earth average. Values are rounded; check the papers before quoting them. Gale Crater is much lower than Jezero, so the atmosphere overhead differs, and solar particle events can raise dose rates sharply. Do not copy these numbers to another site or use them as a crew dose.</p></article>
           <Notice title="No invented dose estimate">This app does not calculate or certify astronaut dose. Interpretation depends on instrument type, energy spectrum, time, shielding, solar-event context and validated mission dosimetry.</Notice>
         </>}
-        {view === "watch" && <>
-          <PageHead eyebrow="CREW COMPANION DISPLAY" title="Wrist interface" desc="A responsive wearable-sized preview connected to the mission workspace." />
-          <div className="watch-layout"><div className="watch-device"><div className="watch-face"><div className="watch-top"><b>MARSLINE</b><span>SOL 018</span></div><div className="watch-time">{missionTime.slice(0, 5)}</div><small>MISSION UTC+05:30</small><div className="watch-temp"><i className="mini-mars" /><b>ENV DATA</b><small>ARCHIVE BASED</small></div><div className="watch-values"><div><small>O₂</small><b>{resources.oxygenReservePct}%</b></div><div><small>H₂O</small><b>{Math.round(waterPct)}%</b></div><div><small>POWER</small><b>{resources.powerReservePct}%</b></div></div><div className="watch-foot"><i className="pulse" /> MISSION LINK · CONCEPT</div></div></div><article className="panel"><div className="panel-top"><span>WEARABLE DISPLAY</span><span className="tag">PREVIEW</span></div><h2>Mission information at a glance</h2><p className="muted">Compact status for mission time, simulated resources, database connectivity and environmental data availability. This is a web preview, not paired watch hardware.</p><div className="data-line"><span>Mission ID</span><b>{missionCode}</b></div><div className="data-line"><span>Waypoints</span><b>{waypoints.length}</b></div><div className="data-line"><span>MEDA indexes checked</span><b>{medaCount}</b></div><div className="data-line"><span>Firebase status</span><b>{dbReady ? "CONNECTED" : "NOT CONNECTED"}</b></div><button className="button outline" onClick={() => navigate("conditions")}>OPEN CURRENT CONDITIONS</button></article></div>
+        {view === "live" && <>
+          <PageHead eyebrow="TABLET CREW DISPLAY · SIMULATED LIVE DATA" title="Live mission" desc="Where the crew is, what the surface is doing and which route to take. Storms and hazards trigger additional routes; every traverse is saved for the next crew member." />
+          <LiveMission live={live} callsign={senderCallsign}>
+            <MarsMap key="live-map" waypoints={waypoints} onSaveRoute={dbReady ? saveRoute : undefined} live={live} handoffs={handoffs} canSaveHandoff={dbReady} initialDock="live" onSaveHandoff={(notes) => persistHandoff(live.draft("manual"), notes)} onMarkHazard={(lat, lon) => void markHazard(lat, lon)} />
+          </LiveMission>
+          <Notice title="What is real and what is simulated">Temperature, pressure and wind come from archived Perseverance MEDA sample sols. The crew position, the dust storm and the live feed are simulations: no live weather feed exists for Jezero, and a tablet cannot get a GPS fix on Mars. Routes use real HRSC terrain data and A* planning. Not validated for crew operations.</Notice>
         </>}
         {view === "communications" && <>
           <PageHead eyebrow="ASTRONAUT COMMUNICATIONS / MISSION RELAY CONCEPT" title="Mission communications" desc="Compose an astronaut-to-Mars Main Station report and save it to the authenticated mission outbox." />
@@ -374,8 +435,8 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
           <Notice title="Communications limitation">Messages are stored in the authenticated astronaut workspace for demonstration and testing. Real transmission to Mars Main Station requires a spacecraft communication system, relay network, mission-control endpoint, and a separate authenticated station inbox.</Notice>
         </>}
         {view === "log" && <>
-          <PageHead eyebrow="MISSION RECORDS · SCIENCE NOTES" title="Mission log" desc="Save observations, route changes and mission notes in the Cloud Firestore." />
-          <div className="log-layout"><article className="panel"><div className="panel-top"><span>CREATE LOG ENTRY</span><span className="tag">FIRESTORE</span></div><form className="form-grid" onSubmit={addLog}>
+          <PageHead eyebrow="MISSION RECORDS · SCIENCE NOTES" title="Mission log" desc={`Save observations, route changes and mission notes in ${demo ? "this browser" : "Cloud Firestore"}.`} />
+          <div className="log-layout"><article className="panel"><div className="panel-top"><span>CREATE LOG ENTRY</span><span className="tag">{demo ? "BROWSER" : "FIRESTORE"}</span></div><form className="form-grid" onSubmit={addLog}>
             <label>Entry type<select value={logType} onChange={(e) => setLogType(e.target.value)}><option value="SCIENCE_OBSERVATION">Science observation</option><option value="ROUTE_UPDATE">Route update</option><option value="ENVIRONMENTAL_NOTE">Environmental note</option><option value="MISSION_STATUS">Mission status</option><option value="RESOURCE_UPDATE">Resource update</option><option value="GENERAL">General</option></select></label>
             <label className="wide">Title<input required maxLength={120} value={logTitle} onChange={(e) => setLogTitle(e.target.value)} placeholder="Observation at delta margin" /></label>
             <label className="wide">Mission note<textarea required rows={5} maxLength={3000} value={logText} onChange={(e) => setLogText(e.target.value)} placeholder="Record observation, instrument, source dataset, sol and location context..." /></label>
@@ -384,12 +445,12 @@ export default function MissionConsole({ initial }: { initial: InitialData }) {
         </>}
         {view === "settings" && <>
           <PageHead eyebrow="DATABASE · APPLICATION CONFIGURATION" title="Data & Firebase" desc="Inspect Firebase Authentication, Cloud Firestore collections and NASA data services." />
-          <div className="settings-grid"><article className="panel"><div className="panel-top"><span>FIREBASE AUTH + FIRESTORE</span><span className={`tag ${dbReady ? "green" : "orange"}`}>{demo ? "DEMO MODE" : dbReady ? "CONNECTED" : "NOT CONNECTED"}</span></div><h2>{demo ? "Browser demo storage" : "Primary cloud database"}</h2><p className="muted">Cloud Firestore is the primary persistent store. Each authenticated Firebase UID receives a private mission workspace with subcollections for routes, science and operations.</p><div className="status-block"><i className={`connection-dot ${dbReady ? "online" : ""}`} /><div><b>{demo ? "Demo storage active" : dbReady ? "Firebase connected" : "Connection not established"}</b><small>{dbInfo}</small></div></div><div className="data-line"><span>Last health check</span><b>{lastHealth}</b></div><div className="data-line"><span>Workspace initialization</span><b>Automatic on first sign-in</b></div><div className="data-line"><span>Starter dataset catalogue</span><b>Automatic workspace bootstrap</b></div><button type="button" className="button outline full" onClick={() => void checkHealth()} disabled={healthChecking}>{healthChecking ? "CHECKING…" : demo ? "CHECK DEMO STORAGE" : "CHECK FIREBASE CONNECTION"}</button>{!demo && <button type="button" className="button outline full" onClick={() => void switchToDemo()}>USE DEMO MODE (NO FIREBASE)</button>}{demo && <button type="button" className="button outline full" onClick={() => void resetDemo()}>RESET DEMO DATA</button>}<a className="button outline full" href="https://firebase.google.com/docs/firestore" target="_blank" rel="noreferrer">FIREBASE DOCUMENTATION ↗</a></article>
+          <div className="settings-grid"><article className="panel"><div className="panel-top"><span>FIREBASE AUTH + FIRESTORE</span><span className={`tag ${dbReady ? "green" : "orange"}`}>{demo ? "DEMO MODE" : dbReady ? "CONNECTED" : "NOT CONNECTED"}</span></div><h2>{demo ? "Browser demo storage" : "Primary cloud database"}</h2><p className="muted">Cloud Firestore is the primary persistent store. Each authenticated Firebase UID receives a private mission workspace with subcollections for routes, science and operations.</p><div className="status-block"><i className={`connection-dot ${dbReady ? "online" : ""}`} /><div><b>{demo ? "Demo storage active" : dbReady ? "Firebase connected" : "Connection not established"}</b><small>{dbInfo}</small></div></div><div className="data-line"><span>Last health check</span><b>{lastHealth}</b></div><div className="data-line"><span>Workspace initialization</span><b>Automatic on first sign-in</b></div><div className="data-line"><span>Starter dataset catalogue</span><b>Automatic workspace bootstrap</b></div><button type="button" className="button outline full" onClick={() => void checkHealth()} disabled={healthChecking}>{healthChecking ? "CHECKING…" : demo ? "CHECK DEMO STORAGE" : "CHECK FIREBASE CONNECTION"}</button>{!demo && <button type="button" className="button outline full" onClick={() => void switchToDemo()}>USE DEMO MODE (NO FIREBASE)</button>}{demo && <button type="button" className="button outline full" onClick={() => void resetDemo()}>RESET DEMO DATA</button>}{demo && isFirebaseClientConfigured() && <button type="button" className="button outline full" onClick={() => void switchToFirebase()}>USE FIREBASE INSTEAD</button>}<a className="button outline full" href="https://firebase.google.com/docs/firestore" target="_blank" rel="noreferrer">FIREBASE DOCUMENTATION ↗</a></article>
           <article className="panel"><div className="panel-top"><span>NASA SCIENCE SERVICES</span><span className="tag green">PUBLIC SOURCES</span></div><Source name="NASA Mars Trek WMTS" description="Orbital map tiles, metadata and coverage" url="https://trek.nasa.gov/tiles/apidoc/trekAPI.html?body=mars" /><Source name="PDS Atmospheres · MEDA" description="Perseverance environmental instrument products" url="https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/meda.html" /><Source name="NASA Planetary Data System" description="Mission archives and documentation" url="https://pds.nasa.gov/" /><Source name="HiRISE catalogue" description="High-resolution MRO imagery" url="https://www.uahirise.org/" /><Source name="CRISM archive" description="MRO spectral products" url="https://pds-geosciences.wustl.edu/missions/mro/crism.htm" /></article></div>
           <FirebaseSetup />
           <article className="panel schema-panel"><div className="panel-top"><span>FIRESTORE DOCUMENT MODEL</span><span className="tag">COLLECTIONS</span></div><div className="schema-grid">{["users/{uid}", "missions/{missionId}", "waypoints", "logs", "messages", "lifeSupport", "nasaDatasets", "scienceTargets", "dataFetches"].map((collection) => <span key={collection}>{collection}</span>)}</div><p className="muted">Workspace collections are scoped under <code>users/{'{uid}'}/missions/ARES-FS-01</code>, including waypoints, logs, messages, lifeSupport, nasaDatasets and dataFetches.</p></article>
         </>}
-        <footer className="footer"><span>MARSLINE · RESEARCH CONCEPT · BUILD 4.0.0</span><span>NASA PDS · MARS TREK · NEXT.JS / FIRESTORE</span></footer>
+        <footer className="footer"><span>MARSLINE · RESEARCH CONCEPT · BUILD {APP_VERSION}</span><span>NASA PDS · MARS TREK · NEXT.JS / FIRESTORE</span></footer>
       </div>
     </main>
     {toast && <div className="toast" role="status">{toast}</div>}

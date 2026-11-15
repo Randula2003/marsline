@@ -145,6 +145,7 @@ export type LonLat = { lon: number; lat: number };
 export type Route = {
   points: LonLat[]; distM: number; timeMin: number; maxSlopeDeg: number; meanSlopeDeg: number; gainM: number; lossM: number;
   cautionPct: number; straightM: number; straightBlocked: boolean; detourPct: number;
+  snapStartM: number; snapEndM: number;          // how far the start / destination were moved to reach walkable ground
   profile: { d: number; z: number; s: number; c: number }[];
 };
 export const WALK_SPEED_KMH = 3; // ASSUMPTION: nominal suited walking speed on easy ground
@@ -188,14 +189,33 @@ class MinHeap {
   }
 }
 
-export type RouteOptions = { blockSlopeDeg?: number; speedKmh?: number };
+/** A circular area to keep out of (a dust storm, a hazard marker). Hard-blocked, unless the start is already inside one: then it is
+ *  only made expensive so the route can lead the crew out of it. */
+export type AvoidZone = LonLat & { radiusM: number };
+export type RouteOptions = { blockSlopeDeg?: number; speedKmh?: number; avoid?: AvoidZone[] };
+
+function avoidMask(t: Terrain, zones: AvoidZone[]): Uint8Array {
+  const mask = new Uint8Array(t.w * t.h);
+  for (const z of zones) {
+    const [cx, cy] = cellOf(t, z.lon, z.lat), rx = z.radiusM / t.dxM, ry = z.radiusM / t.dyM;
+    for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(t.h - 1, Math.ceil(cy + ry)); y++)
+      for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(t.w - 1, Math.ceil(cx + rx)); x++)
+        if (Math.hypot((x + 0.5 - cx) * t.dxM, (y + 0.5 - cy) * t.dyM) <= z.radiusM) mask[y * t.w + x] = 1;
+  }
+  return mask;
+}
 
 export function planRoute(t: Terrain, a: LonLat, b: LonLat, opts: RouteOptions = {}): Route | { error: string } {
   const blockQ = (opts.blockSlopeDeg ?? 99) * 4;                     // slope is stored as degrees x 4
-  const ok = (i: number) => passable(t, i) && t.slope[i] < blockQ;
+  const terrainOk = (i: number) => passable(t, i) && t.slope[i] < blockQ;
   const [ax, ay] = cellOf(t, a.lon, a.lat), [bx, by] = cellOf(t, b.lon, b.lat);
-  const s = snap(t, ax, ay, ok), g = snap(t, bx, by, ok);
+  const s = snap(t, ax, ay, terrainOk), g = snap(t, bx, by, terrainOk);
   if (s === null || g === null) return { error: "Start or destination is outside the mapped area or surrounded by no-go terrain." };
+  const zones = opts.avoid?.length ? avoidMask(t, opts.avoid) : null;
+  const startInZone = !!zones && zones[s] === 1;
+  if (zones && zones[g] && !startInZone) return { error: "The destination is inside a hazard or storm zone, so it cannot be reached safely right now." };
+  const ok = (i: number) => terrainOk(i) && (!zones || !zones[i] || startInZone);       // inside a zone: blocked, or only costly when we must leave it
+  const zoneCost = (i: number) => (startInZone && zones![i] ? 6 : 1);
   const { w, h } = t, n = w * h, minStep = Math.min(t.dxM, t.dyM), SQ2 = Math.SQRT2;
   const gs = new Float32Array(n).fill(Infinity), prev = new Int32Array(n).fill(-1), done = new Uint8Array(n);
   const gxT = g % w, gyT = (g / w) | 0;
@@ -215,11 +235,11 @@ export function planRoute(t: Terrain, a: LonLat, b: LonLat, opts: RouteOptions =
       if (done[j] || !ok(j)) continue;
       if (dx && dy && (!ok(y * w + nx) || !ok(ny * w + x))) continue; // no corner cutting through no-go cells
       const len = Math.hypot(dx * t.dxM, dy * t.dyM);
-      const ng = gs[i] + len * (t.cost[i] + t.cost[j]) / 80;
+      const ng = gs[i] + len * (t.cost[i] + t.cost[j]) / 80 * zoneCost(j);
       if (ng < gs[j]) { gs[j] = ng; prev[j] = i; heap.push(ng + hFn(j), j); }
     }
   }
-  if (!done[g]) return { error: "No walkable route exists between these points under the current slope limits." };
+  if (!done[g]) return { error: zones ? "No walkable route exists that avoids the hazard or storm zones." : "No walkable route exists between these points under the current slope limits." };
 
   const cells: number[] = [];
   for (let i = g; i !== -1; i = prev[i]) cells.push(i);
@@ -239,14 +259,16 @@ export function planRoute(t: Terrain, a: LonLat, b: LonLat, opts: RouteOptions =
   });
   const points = cells.map((i) => { const [lon, lat] = lonLatOf(t, (i % w) + 0.5, ((i / w) | 0) + 0.5); return { lon, lat }; });
   const straightM = Math.hypot((bx - ax) * t.dxM, (by - ay) * t.dyM);
+  const snapDist = (cell: number, x: number, y: number) => Math.hypot(((cell % w) + 0.5 - x) * t.dxM, (((cell / w) | 0) + 0.5 - y) * t.dyM);
   let blocked = false;
   const steps = Math.max(2, Math.ceil(Math.hypot(bx - ax, by - ay) * 2));
   for (let k = 0; k <= steps && !blocked; k++) {
     const x = Math.floor(ax + (bx - ax) * k / steps), y = Math.floor(ay + (by - ay) * k / steps);
-    if (x >= 0 && y >= 0 && x < w && y < h && !ok(y * w + x)) blocked = true;
+    if (x >= 0 && y >= 0 && x < w && y < h && !terrainOk(y * w + x)) blocked = true;
   }
   return {
     points, distM: dist, timeMin: time, maxSlopeDeg: maxSlope, meanSlopeDeg: slopeSum / cells.length, gainM: gain, lossM: loss,
-    cautionPct: 100 * caution / cells.length, straightM, straightBlocked: blocked, detourPct: straightM > 0 ? 100 * (dist / straightM - 1) : 0, profile
+    cautionPct: 100 * caution / cells.length, straightM, straightBlocked: blocked, detourPct: straightM > 0 ? 100 * (dist / straightM - 1) : 0,
+    snapStartM: snapDist(s, ax, ay), snapEndM: snapDist(g, bx, by), profile
   };
 }

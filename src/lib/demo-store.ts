@@ -1,11 +1,11 @@
 // Browser demo backend. Used automatically when Firebase is not configured (or when the user switches to demo mode),
 // so every feature of the console works without any cloud setup. Data lives in this browser's localStorage only.
 import { ZodError } from "zod";
-import { lifeSupportSchema, logSchema, messageSchema, waypointSchema } from "@/lib/validation";
-import { NASA_DATASETS } from "@/lib/constants";
+import { handoffSchema, lifeSupportSchema, logSchema, messageSchema, waypointSchema } from "@/lib/validation";
+import { MISSION_SOL, NASA_DATASETS } from "@/lib/constants";
 
 type Rec = Record<string, unknown> & { id: string };
-type Db = { waypoints: Rec[]; logs: Rec[]; lifeSupport: Rec[]; messages: Rec[] };
+type Db = { waypoints: Rec[]; logs: Rec[]; lifeSupport: Rec[]; messages: Rec[]; handoffs: Rec[] };
 const KEY = "marsline-demo-v1";
 const now = () => new Date().toISOString();
 const uid = () => `demo-${Math.random().toString(36).slice(2, 10)}`;
@@ -19,18 +19,19 @@ function seed(): Db {
     ],
     logs: [{ id: "demo-log-1", title: "Demo workspace initialised", note: "Marsline is running in demo mode. Entries are saved in this browser only.", logType: "MISSION_STATUS", occurredAt: t, createdAt: t }],
     lifeSupport: [],
+    handoffs: [],
     messages: [{
       id: "demo-msg-1", senderCallsign: "MARS MAIN STATION", recipient: "ASTRONAUT-01", direction: "STATION_TO_ASTRONAUT", subject: "Welcome to the Marsline demo",
-      messageBody: "Messages are stored in this browser as a simulation. Nothing is transmitted over a radio link.", priority: "ROUTINE", marsSol: 18,
+      messageBody: "Messages are stored in this browser as a simulation. Nothing is transmitted over a radio link.", priority: "ROUTINE", marsSol: MISSION_SOL,
       transport: "BROWSER_DEMO", deliveryStatus: "DELIVERED_SIMULATION", transmissionNote: "Demo mode simulation only.", sentAt: t, createdAt: t
     }]
   };
 }
 
 let memory: Db | null = null;
-function load(): Db {
+function load(): Db {   // note: data saved before handoffs existed has no handoffs list, so it is defaulted below
   if (memory) return memory;
-  try { const raw = window.localStorage.getItem(KEY); if (raw) { memory = JSON.parse(raw) as Db; return memory; } } catch { /* storage blocked: stay in memory */ }
+  try { const raw = window.localStorage.getItem(KEY); if (raw) { memory = JSON.parse(raw) as Db; memory.handoffs ??= []; return memory; } } catch { /* storage blocked: stay in memory */ }
   memory = seed(); save(); return memory;
 }
 function save() { try { window.localStorage.setItem(KEY, JSON.stringify(memory)); } catch { /* ignore */ } }
@@ -92,6 +93,12 @@ export async function demoRequest(path: string, init: RequestInit = {}): Promise
       };
       db.messages.unshift(rec); save(); return json({ data: rec }, 201);
     } catch (e) { return bad(e, "Unable to save mission message"); }
+  }
+
+  if (url === "/api/handoffs") {
+    if (method === "GET") return json({ data: [...db.handoffs].sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))).slice(0, 20) });
+    try { const b = handoffSchema.parse(await body(init)); const rec: Rec = { id: uid(), ...b, savedAt: now(), isSimulated: true }; db.handoffs.unshift(rec); db.handoffs.splice(50); save(); return json({ data: rec }, 201); }
+    catch (e) { return bad(e, "Unable to save handoff record"); }
   }
 
   // Real NASA PDS index fetch still goes through the server (read-only, allow-listed); only the sign-in is skipped.

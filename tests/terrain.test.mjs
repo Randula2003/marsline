@@ -60,3 +60,12 @@ test("a stricter no-go slope blocks steep cells and a slower speed lengthens the
   const slow = planRoute(t, at(t, 2, 5), at(t, 8, 5), { speedKmh: 1.5 }), fast = planRoute(t, at(t, 2, 5), at(t, 8, 5), { speedKmh: 3 });
   assert.ok(Math.abs(slow.timeMin / fast.timeMin - 2) < 0.01);
 });
+
+test("a start inside no-go ground is moved to the nearest walkable cell and the move is reported", () => {
+  const block = []; for (let y = 9; y <= 11; y++) for (let x = 9; x <= 11; x++) block.push([x, y]);   // 3x3 no-go patch
+  const t = grid(20, 20, block);
+  const r = planRoute(t, at(t, 10, 10), at(t, 17, 10));
+  assert.ok(!("error" in r));
+  assert.ok(r.snapStartM > 100 && r.snapStartM < 130, `start moved ${r.snapStartM} m (expected about 2 cells = 118 m)`);
+  assert.ok(r.snapEndM < 1, "a destination on walkable ground does not move");
+});

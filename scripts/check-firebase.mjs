@@ -6,8 +6,9 @@
 //     This creates one anonymous user in YOUR Firebase project; skip it with --no-auth-test.
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");   // fileURLToPath keeps Windows drive paths correct
 const envFile = process.env.FIREBASE_ENV_FILE ? path.resolve(process.env.FIREBASE_ENV_FILE) : path.join(root, ".env.local");   // FIREBASE_ENV_FILE is used by tests
 const env = { ...process.env };
 if (fs.existsSync(envFile)) {

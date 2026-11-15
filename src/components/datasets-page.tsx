@@ -19,7 +19,7 @@ export default function DatasetsPage({ onOpenMap }: { onOpenMap: () => void }) {
         <article className="metric-card"><small>FILES IN THE REPOSITORY</small><b>{fileCount}</b></article>
         <article className="metric-card"><small>AGENCIES: NASA, ESA, USGS</small><b>3</b></article>
       </div>
-      <p className="muted" style={{ margin: "14px 0" }}>Every dataset from your supplied zip and every dataset fetched from NASA is listed here with where it comes from, how it is used, and where the derived files are in the repository. Items that the app does not use are marked, with the reason.</p>
+      <p className="muted" style={{ margin: "14px 0" }}>Every dataset from the supplied challenge data and every dataset fetched from NASA is listed here with where it comes from, how it is used, and where the derived files are in the repository. Items that the app does not use are marked, with the reason.</p>
       <div className="jz-tabs" role="tablist" aria-label="Filter datasets">{FILTERS.map(([label], i) => <button key={label} role="tab" aria-selected={i === filter} className={`jz-tab ${i === filter ? "on" : ""}`} onClick={() => setFilter(i)}>{label}</button>)}</div>
       <div className="ds-grid">{shown.map((d) => (
         <article className="panel ds-card" key={d.id}>

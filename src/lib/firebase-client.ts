@@ -48,9 +48,13 @@ export async function getFirebaseUser(): Promise<User> {
 
 // Demo mode keeps every feature working without cloud setup (data stays in this browser). It switches on automatically when the
 // Firebase web settings are missing, when NEXT_PUBLIC_DEMO_MODE=true, or when the user chooses it from the console.
+// The user's choice is remembered in localStorage so a page reload does not drop back to a Firebase setup that is not working yet.
+const DEMO_KEY = "marsline-demo-mode";
 let demoMode = false;
-export function isDemoMode(): boolean { return demoMode || process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !isFirebaseClientConfigured(); }
-export function enableDemoMode() { demoMode = true; }
+function storedDemoChoice(): boolean { try { return typeof window !== "undefined" && window.localStorage.getItem(DEMO_KEY) === "1"; } catch { return false; } }
+export function isDemoMode(): boolean { return demoMode || storedDemoChoice() || process.env.NEXT_PUBLIC_DEMO_MODE === "true" || !isFirebaseClientConfigured(); }
+export function enableDemoMode() { demoMode = true; try { window.localStorage.setItem(DEMO_KEY, "1"); } catch { /* storage blocked: stays on for this tab only */ } }
+export function disableDemoMode() { demoMode = false; try { window.localStorage.removeItem(DEMO_KEY); } catch { /* ignore */ } }
 
 export async function firebaseRequest(path: string, init: RequestInit = {}): Promise<Response> {
   if (isDemoMode()) return demoRequest(path, init);

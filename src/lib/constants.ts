@@ -1,5 +1,10 @@
 export const DEFAULT_MISSION_CODE = "ARES-FS-01";
 export const MARS_MEAN_RADIUS_KM = 3389.5;
+export const APP_VERSION = "4.0.1";                // keep in step with package.json
+// Concept mission clock shown in the console (a demonstration timeline, not real mission data).
+export const MISSION_SOL = 18;
+export const MISSION_PLAN_SOLS = 50;
+export const MISSION_SOL_LABEL = String(MISSION_SOL).padStart(3, "0");
 
 export const MEDA_INDEXES = {
   ATS: { title: "Air Temperature Sensor", url: "https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PERSEVERANCE/logs/mars2020_meda_calibrated_ATS.csv" },
